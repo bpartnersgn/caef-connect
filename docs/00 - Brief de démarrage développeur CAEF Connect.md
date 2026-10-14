@@ -1,6 +1,6 @@
 # Brief de démarrage développeur CAEF Connect
 
-Oct 12, 2026 · @Bangoura · à lire en premier, avant tout le reste
+Oct 12, 2026 · @Bangoura · à lire en premier, avant tout le reste · mis à jour le 14/10/2026 avec l'état du backend du lot 1
 
 ## 1. Ce que tu construis et où trouver chaque document
 
@@ -18,6 +18,9 @@ Ta mission de départ est de construire le **lot 1** jusqu'à une version testab
 | DAT détaillé | Architecture, sécurité, sauvegarde, déploiement | [DAT](https://claude.ai/code/artifact/3498888f-f2dd-4793-8acc-f9ab385e2f15) |
 | Référentiel des indicateurs | Avant de calculer un chiffre de tableau de bord | [Référentiel](https://claude.ai/code/artifact/fbf60b80-9db4-465d-a3da-0c4deb4a4048) |
 | Plan de tests et de recette | Pour savoir comment ton travail sera vérifié | [Plan de tests](https://claude.ai/code/artifact/7dd1d811-41ff-46ce-bb8d-51a2cac267c0) |
+| Dépôt de code | Le code, ses consignes pour les assistants IA et les choix faits là où les documents se taisent | Dépôt `bpartnersgn/caef-connect` : `AGENTS.md` à la racine, `backend/README.md` et `backend/DECISIONS.md` |
+
+**État au 14/10/2026.** Le backend du lot 1 existe : un monolithe modulaire Django avec ses services métier, son API REST `/api/v1`, le moteur de droits tiré de la Matrice, la synchronisation hors ligne, les paiements Mobile Money en mode déclaratif ou simulé, un générateur de données fictives, les tests de la Matrice, Docker Compose et l'intégration continue (branche `backend-lot1`, demande de fusion n° 1, en relecture). Les écrans (pages HTMX et application terrain PWA) restent à construire. La section 4 donne le détail de l'avancement, et la section 5 le nom du paramètre de chaque position d'attente.
 
 Les identifiants (BEN-03, RG-FOR-06, E-TDB-01, IND-07…) sont les mêmes dans tous les documents. Reprends-les dans tes noms de branches, tes messages de commit et tes tests : c'est ce qui permettra de prouver qu'une exigence est couverte.
 
@@ -41,15 +44,15 @@ Ces règles protègent des femmes dont les données personnelles sont confiées 
 
 ## 3. Pile technique et architecture de départ
 
-Le DAT détaillé propose une architecture volontairement simple, pour une petite équipe et des connexions faibles. Ces choix sont à valider (DAT § 10), mais tu peux démarrer dessus.
+Le DAT détaillé propose une architecture volontairement simple, pour une petite équipe et des connexions faibles. Ces choix sont à valider (DAT § 10), mais tu peux démarrer dessus. Pour le backend du lot 1, le choix de **Django** est fait et noté dans le dépôt ; la colonne « Choix de départ » indique ce qui est en place.
 
 | Brique | Choix de départ | Pourquoi |
 | --- | --- | --- |
-| Application | Un seul monolithe modulaire, en Django ou Laravel ; prends celui que tu maîtrises et note ce choix | Un seul déploiement ; modules aux frontières nettes |
+| Application | Un seul monolithe modulaire : **retenu, Django 5.2 et Django REST framework sous Python 3.13**, servi par Gunicorn | Un seul déploiement ; modules aux frontières nettes |
 | Back-office | Pages rendues côté serveur, avec HTMX et Alpine.js pour l'interactivité ; pas d'application monopage | Pages légères, utilisables sur téléphone et réseau lent |
-| Base | PostgreSQL : un schéma opérationnel et un schéma de pilotage pour les agrégats | Les tableaux de bord ne ralentissent pas la saisie |
-| Fichiers | Stockage d'objets compatible S3, chiffré ; la base ne garde que les métadonnées | Pas de fichier sur le disque du serveur |
-| Tâches de fond | Redis et un worker : calcul nocturne des indicateurs, PDF, notifications | Aucune page ne bloque sur un calcul |
+| Base | PostgreSQL 16 : un schéma opérationnel et un schéma `pilotage` pour les agrégats (table `pilotage.valeur_indicateur`) | Les tableaux de bord ne ralentissent pas la saisie |
+| Fichiers | Stockage d'objets compatible S3, chiffré ; la base ne garde que les métadonnées ; MinIO en local | Pas de fichier sur le disque du serveur |
+| Tâches de fond | Redis 7 et Celery (worker et beat) : calcul nocturne des indicateurs, doublons, clôtures du mois, rapprochement opérateur, alertes | Aucune page ne bloque sur un calcul |
 | Exposition | Nginx en proxy HTTPS | TLS, en-têtes de sécurité, limitation de débit |
 | Déploiement | Docker Compose, même configuration en préproduction et en production | Reproductible |
 | Authentification | Comptes nominatifs, double authentification TOTP pour les rôles privilégiés | SEC |
@@ -60,6 +63,8 @@ Le DAT détaillé propose une architecture volontairement simple, pour une petit
 | Paiements | Interface interne « passerelle Mobile Money », un adaptateur par agrégateur ou opérateur, plus un adaptateur déclaratif sans opérateur | Changer d'opérateur sans toucher les modules ; repli tant que le contrat n'est pas signé (DAT § 4.6) |
 
 Découpe le code selon les modules du DAT : identité, habilitations, référentiels, bénéficiaires, formations, partenaires, conventions, boutique, facturation, paiements, pilotage, documents, services transverses (dont la synchronisation hors ligne). Un module n'accède pas directement aux tables d'un autre ; il passe par ses services. Les noms de tables et de champs sont ceux du Modèle de données (beneficiaire, session\_formation, inscription, contribution…).
+
+C'est ainsi que le backend est organisé : une application Django par module sous `backend/caef/` (`identite`, `habilitations`, `referentiels`, `journal`, `beneficiaires`, `formations`, `documents`, `partenaires`, `conventions`, `boutique`, `facturation`, `paiements`, `pilotage`, `synchronisation`, `notifications`, et `commun` pour les briques partagées). Dans chacune, `services.py` porte les règles métier, `api.py` les vues REST, qui lisent la requête, appellent un service et sérialisent la réponse, et `taches.py` les tâches Celery. Les droits viennent du seul fichier `caef/habilitations/matrice.yaml`, transcrit de la Matrice ; le filtre de centre est appliqué une fois pour toutes dans la couche d'accès aux données (`caef/commun/api.py`). La liste des routes de l'API est dans le DAT, § 4.2.
 
 **Rôles.** La Matrice compte désormais onze rôles internes au MVP : les huit d'origine, plus **RA** (responsable adjoint de centre : mêmes droits que le RC sur son centre, mais droits de validation seulement pendant un intérim déclaré, USR-09) et **CPT** (comptable de centre : boutique et rapprochement des contributions financières, CTR-09, sans accès aux dossiers des bénéficiaires). S'y ajoute **VB** (vendeur ou vendeuse de boutique), actif au pilote, la boutique étant dans le lot 1. Ces trois rôles sont des ajouts du porteur de projet, absents du DM et du CDC. Pour la scolarité, l'AA et le CPT encaissent ; le CPT affecte les paiements, rapproche les relevés de l'opérateur et demande les remboursements, que valide le RC ou le RA en intérim. Le mode hors ligne est réservé aux rôles de terrain du centre ; ADM, DG, RSE et SE travaillent en ligne seulement. Le 13/10/2026, le porteur de projet a fourni l'organigramme des centres : les écrans affichent ses titres (responsable du centre, adjoint, assistante, chef comptable, chef matériels, moniteurs, gérante de la salle d'exposition et de la boutique) sur des codes de rôle inchangés, et **CMT** (chef matériels) s'ajoute en consultation, sans donnée nominative et en ligne seulement ; la cheffe de classe est une élève sans compte, désignée sur son inscription (Matrice § 2.1).
 
@@ -83,6 +88,18 @@ Le lot 1 couvre, selon le PRD : ADM, USR, BEN-01 à BEN-13, FOR, TDB-01 à TDB-0
 | 11. Durcissement | Revue de sécurité ASVS, tests de charge, sauvegarde et restauration testées, supervision | PERF, DISP, OPS | Version testable remise pour les campagnes C2 à C5 |
 
 Montre une démo au client à la fin de chaque étape, sur des données fictives. Ne passe pas à l'étape suivante si les tests de droits de l'étape 1 ne sont plus verts.
+
+**Avancement au 14/10/2026.** Le backend couvre les étapes 0 à 9 côté serveur ; les écrans et l'application terrain restent à faire, ainsi que les étapes 10 et 11.
+
+| Étape | Fait côté serveur | Reste à faire |
+| --- | --- | --- |
+| 0. Socle | Dépôt, Docker Compose (web, worker, beat, PostgreSQL, Redis, MinIO, Nginx), intégration continue GitHub Actions, générateur de données fictives, API de synchronisation et enrôlement des appareils | Environnement de recette déployé ; coquille PWA, base locale chiffrée et journal d'opérations côté appareil |
+| 1. Identité et habilitations | Comptes nominatifs, Argon2, TOTP et codes de secours, affectations, intérims, modules par centre, Matrice en fichier de données et tests générés, journal d'audit en ajout seul | Écrans d'administration |
+| 2 à 4. Bénéficiaires, formations, documents | Services et API : recherche réseau, doublons et fusion réversible 30 jours, candidatures, transferts, sessions, présences, évaluations, attestations, pièces jointes par lien signé | Écrans, PDF des attestations, essais à 360 pixels |
+| 5. Pilotage et rapports | Calcul nocturne de 29 indicateurs, fiches d'indicateurs, rapports R-01 à R-04, exports journalisés | Tableaux de bord à l'écran |
+| 6 à 8. RSE, boutique, clôture mensuelle | Services et API complets, dont reçus numérotés par série d'appareil, caisse, inventaire, reversements, état de rapprochement et verrouillage du mois | Écrans |
+| 9. Scolarité et paiements | Services payants, tarifs, échéances, exonérations, paiements en espèces et Mobile Money, passerelles déclarative et simulée, notifications signées, relevés opérateur, remboursements | Adaptateur de l'agrégateur, quand H16 sera tranchée ; écrans |
+| 10 et 11. Reprise et durcissement | Rien | Tout |
 
 **Module boutique (BOU, ajout du porteur de projet).** Dans le lot 1 (H14 tranchée), construit après le socle en parallèle de la RSE ; le rôle VB est actif au pilote. Tables du Modèle : PointDeVente, Produit, PrixProduit, Depot, MouvementStock, Vente, LigneVente, Reglement, SessionCaisse, Inventaire, Reversement, IntérimResponsable, et pour la clôture mensuelle cloture\_mensuelle et ligne\_rapprochement. Règles à respecter :
 
@@ -130,6 +147,25 @@ Plusieurs décisions appartiennent à la Direction Générale et au comité de p
 
 La liste complète des hypothèses (H1 à H16) et des écarts (A1 à A16) est dans le PRD. Si tu tombes sur une question qu'aucun document ne tranche, choisis l'option la plus restrictive pour les données, note-la dans un fichier DECISIONS.md du dépôt et signale-la au client.
 
+**Où se règlent ces positions dans le backend.** Chaque point ouvert est un paramètre de `settings.CAEF`, lu dans une variable d'environnement (`backend/.env.example`) ; aucune valeur n'est codée en dur. Les principaux :
+
+| Point ouvert | Variable d'environnement | Valeur par défaut |
+| --- | --- | --- |
+| Champs obligatoires du dossier (H4) | `CHAMPS_REQUIS_DOSSIER` (paramètre interne) | nom, prénoms, sexe, zone, consentement (date et mode), naissance |
+| Seconde validation DG d'une proposition (H5) | `CAEF_SEUIL_SECONDE_VALIDATION_PROPOSITION` | vide : pas de seconde validation |
+| Tarifs de la scolarité (H15) | table `tarif_service`, saisie par l'ADM sur décision DG | aucun tarif, donc aucune échéance créée |
+| Passerelle Mobile Money (H16) | `CAEF_PASSERELLE_MOBILE_MONEY` | `declaratif` ; `simulateur` possible hors production |
+| Centre des paiements sans référence valide (H16) | `CAEF_CENTRE_PAIEMENTS_NON_REFERENCES` | vide : transaction orpheline, rattachée à la déclaration |
+| Travail hors ligne (H11) | `CAEF_HORS_LIGNE_VALIDITE_HEURES`, `CAEF_ALERTE_SYNCHRO_HEURES`, `CAEF_ECART_HORLOGE_SECONDES` | 72 heures, 48 heures, 300 secondes |
+| Seuils de doublon | `CAEF_SEUIL_DOUBLON_BLOQUANT`, `CAEF_SEUIL_DOUBLON_INFORMATIF` | 60 et 40 |
+| Bénéficiaire active (R1) | `CAEF_JOURS_BENEFICIAIRE_ACTIVE` | 90 jours |
+| Petits effectifs (R3) | `CAEF_SEUIL_PETITS_EFFECTIFS` | 5 |
+| Seuil de présence pour l'achèvement | `CAEF_SEUIL_PRESENCE_DEFAUT` | 80 %, réglable par formation |
+| Inactivité d'un dossier | `CAEF_JOURS_INACTIVITE_DOSSIER` | 365 jours |
+| Limite de la clôture mensuelle | `CAEF_CLOTURE_MENSUELLE_JOUR_LIMITE` | le 10 du mois suivant |
+
+Le fichier `backend/DECISIONS.md` liste aussi les lectures restrictives retenues là où la SFD et la Matrice divergent (reprises dans la Matrice, § 5) et les choix de mise en œuvre (numérotation des reçus, écriture tardive, arrondi des reversements).
+
 ## 6. Définition de terminé, tests et méthode de travail
 
 ### 6.1 Une fonctionnalité est terminée quand
@@ -149,7 +185,7 @@ Le détail des campagnes de vérification qui suivront ton travail est dans le P
 
 Le vibe coding va vite, mais un assistant ne connaît pas ces règles tant qu'on ne les lui donne pas. Quelques précautions évitent l'essentiel des dérives.
 
-- **Un fichier d'instructions à la racine du dépôt** (par exemple CLAUDE.md ou AGENTS.md), qui reprend les règles de la section 2, la pile, le découpage en modules et le fait que les noms de tables viennent du Modèle de données. L'assistant le relit à chaque session.
+- **Un fichier d'instructions à la racine du dépôt** (par exemple CLAUDE.md ou AGENTS.md), qui reprend les règles de la section 2, la pile, le découpage en modules et le fait que les noms de tables viennent du Modèle de données. L'assistant le relit à chaque session. Il existe : `AGENTS.md`, que `CLAUDE.md` renvoie, reprend les treize règles et la façon de travailler (règles métier dans `services.py`, `ruff check` puis `pytest` avant de pousser).
 - **Une tâche à la fois, avec son identifiant.** Donne à l'assistant l'extrait de la SFD concerné (écran, règles, critères d'acceptation) plutôt qu'une consigne vague.
 - **Les tests d'abord.** Demande-lui d'écrire le test du critère d'acceptation avant le code, puis de faire passer le test.
 - **Relis toi-même chaque contrôle d'accès et chaque requête.** C'est là que les assistants se trompent le plus souvent : un filtre par centre oublié suffit à exposer des dossiers d'un autre centre.

@@ -1,6 +1,6 @@
 # Référentiel des indicateurs CAEF Connect
 
-Oct 12, 2026 · @Bangoura · version 0.1, à valider par la Direction Générale et le suivi-évaluation
+Oct 12, 2026 · @Bangoura · version 0.1, à valider par la Direction Générale et le suivi-évaluation · mis à jour le 14/10/2026 (calcul dans le backend, section 2.3)
 
 ## 1. Objet, sources et principes de mesure
 
@@ -51,6 +51,22 @@ Toute modification de formule crée une nouvelle version numérotée. Un rapport
 | Ventilations | Centre, pays, zone territoriale, période, programme, catégorie de formation, tranche d'âge. La ventilation territoriale fine est P2 (TDB-08). |
 | Niveau de validation | Déclaratif : saisi sans justificatif ni second contrôle. Vérifié : appuyé par un justificatif ou validé par une seconde personne habilitée. Un indicateur affiche les deux valeurs séparément quand les deux existent. |
 | Module désactivé | Pour un centre où le module source d'un indicateur est désactivé (boutique, salle d'exposition, scolarité et paiements, volet RSE du centre ; ADM-08), l'indicateur s'affiche « Module non activé », jamais 0, pour toute la période désactivée. Les totaux nationaux additionnent seulement les centres où le module est actif et indiquent leur nombre (par exemple « 3 centres sur 4 »). Une réactivation ne reprend pas de données pour la période désactivée (RG-ADM-20). |
+
+### 2.3 Mise en œuvre dans le backend du lot 1 (14/10/2026)
+
+Le calcul est écrit dans `backend/caef/pilotage/indicateurs.py`. Une tâche nocturne (1 h 00) recalcule le mois courant et le mois précédent, par centre réel puis au national, et range chaque valeur dans la table `pilotage.valeur_indicateur` (Modèle § 10) avec sa date de calcul, son niveau de validation, son numérateur et son dénominateur, et le nombre d'enregistrements non renseignés. Les règles de la section 2.2 y sont appliquées : une valeur absente reste vide et s'affiche « non renseigné » ; un module désactivé donne « Module non activé » ; les centres fictifs et les dossiers fusionnés ne comptent jamais ; financier et en nature, déclaratif et vérifié, et chaque devise restent séparés ; taux à une décimale et montants à l'unité, sans arrondi intermédiaire ; une valeur figée à la clôture d'une période n'est plus recalculée. Une valeur est marquée « fiabilité faible » au-delà de 20 % d'enregistrements non renseignés.
+
+Le statut de chaque fiche est tenu dans la table `fiche_indicateur` (brouillon, proposée, validée, révisée, retirée) : seule une fiche validée s'affiche au national, et une fiche retirée n'est plus calculée. Le paramètre de la bénéficiaire active (R1) est `CAEF_JOURS_BENEFICIAIRE_ACTIVE`, 90 jours par défaut, et celui des petits effectifs (R3) `CAEF_SEUIL_PETITS_EFFECTIFS`, 5 par défaut.
+
+| Famille | Calculés au lot 1 | Non calculés, affichés « non renseigné » |
+| --- | --- | --- |
+| Formation et bénéficiaires | IND-01 à IND-10 | IND-11, IND-12 (lot 3) |
+| RSE et programmes | IND-20 à IND-24, IND-26 à IND-28 | IND-25 (pas de source au MVP), IND-29 (lot 3) |
+| Qualité des données | IND-30, IND-31, IND-33, IND-34 | IND-32 (pas encore d'import), IND-35 |
+| Adoption | IND-40 | IND-41 à IND-44 (pas de source de données au MVP) |
+| Boutique et clôture mensuelle | IND-45 à IND-50 ; IND-45 à IND-49 marqués « Module non activé » pour un centre sans boutique | Aucun |
+
+Vingt-neuf indicateurs sont donc calculés. IND-35 et IND-41 à IND-44 figurent pourtant dans la liste des fiches à valider avant le pilote (section 9.2) : leur calcul, ou une saisie manuelle de la mesure, reste à prévoir.
 
 ## 3. Catalogue des indicateurs
 

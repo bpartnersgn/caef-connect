@@ -1,6 +1,6 @@
 # Plan de tests et de recette CAEF Connect
 
-Oct 12, 2026 · @Bangoura · version 0.2, à valider par le comité de pilotage
+Oct 12, 2026 · @Bangoura · version 0.2, à valider par le comité de pilotage · mis à jour le 14/10/2026 (état de C1 et des données de test, sections 3.4 et 4.1)
 
 ## 1. Objet, périmètre et références
 
@@ -81,6 +81,18 @@ Le jeu de référence est un fichier versionné avec le code. Pour chaque indica
 
 Un jeu de volume, généré par script à partir des hypothèses de capacité du DAT, sert à C4 (section 7).
 
+### 3.4 Ce qui existe au 14/10/2026
+
+Le backend fournit la commande `python manage.py generer_donnees_fictives`, refusée en production, qui passe par les services métier pour créer un jeu de démonstration entièrement fictif : les deux centres de test, CAEF Cameroun (code CMR) et Centre de test B (code TSB, marqué fictif, exclu des indicateurs nationaux), les zones, les référentiels, la période de l'année, les modules optionnels activés au CAEF Cameroun, une formation, une session, des bénéficiaires aux noms visiblement inventés et quelques opérations de boutique et de RSE. Le mot de passe des comptes vient de `CAEF_MOT_DE_PASSE_DEMO` ou est tiré au hasard et affiché une seule fois.
+
+| Compte | Rôle | Centre |
+| --- | --- | --- |
+| `adm.national`, `dg.direction`, `rse.national`, `se.national` | ADM, DG, RSE, SE | National |
+| `rc.cmr`, `ra.cmr`, `aa.cmr`, `rp.cmr`, `fo.cmr`, `cpt.cmr`, `vb.cmr`, `cmt.cmr` | RC, RA, AA, RP, FO, CPT, VB, CMT | CAEF Cameroun |
+| `rc.tsb`, `aa.tsb` | RC, AA | Centre de test B |
+
+Pour atteindre les sections 3.2 et 3.3, il reste à ajouter : le second compte RA avec un intérim daté, un VB et les autres rôles au Centre de test B, les comptes à rôles multiples, les appareils enrôlés, et surtout le jeu de référence lui-même (300 bénéficiaires, résultats d'indicateurs calculés à la main, registres papier fictifs), versionné avec le code.
+
 ## 4. C1 Tests automatisés
 
 C1 protège contre la régression : chaque modification du code déclenche la suite complète dans l'intégration continue, et un échec bloque la fusion. Une petite équipe ne peut pas rejouer à la main toute la recette à chaque correction ; ces tests le font à sa place.
@@ -99,6 +111,21 @@ C1 protège contre la régression : chaque modification du code déclenche la su
 Les tests d'indicateurs comparent la sortie du calcul nocturne aux résultats attendus du jeu de référence (3.3), au chiffre près. Une modification de formule sans mise à jour du résultat attendu et de la version de la fiche fait échouer la suite.
 
 Le rapport de C1 (tests passés, couverture, vulnérabilités) accompagne chaque livraison en recette ; une livraison sans rapport vert n'est pas acceptée en C2.
+
+### 4.1 État de C1 au 14/10/2026
+
+L'intégration continue tourne sur GitHub Actions (`.github/workflows/backend.yml`) à chaque poussée sur la branche principale et à chaque demande de fusion qui touche le backend ou la Matrice. Elle enchaîne l'analyse statique (`ruff check`), les contrôles de Django, la vérification qu'aucune migration ne manque, puis `pytest` sur une vraie base PostgreSQL 16. En local, la même suite se lance par `pytest` dans `backend/`, après `pip install -r requirements-dev.txt`.
+
+| Niveau | Couvert aujourd'hui | Reste à faire |
+| --- | --- | --- |
+| Droits | `test_matrice.py` : le fichier `matrice.yaml` reproduit la Matrice ; chaque cellule rôle, objet et action est accordée dans le centre de l'utilisateur et refusée dans l'autre centre ; intérim du RA ; validation de caisse à défaut de CPT ; rôle suspendu quand son module est désactivé | Appel par l'API de synchronisation pour chaque cellule |
+| Règles transverses | `test_scenarios.py` : qui saisit une candidature ne la valide pas ; journal écrit dans la transaction et en ajout seul ; refus hors périmètre journalisé, en service et par l'API ; le formateur ne voit que nom, prénom et code ; jeton d'appareil limité à la synchronisation ; prix et total calculés par le serveur ; mois validé verrouillé ; vente annulée par contre-écriture seulement | Une règle RG-xxx par test pour toute la SFD, transitions de statut interdites |
+| Synchronisation | Opération reçue deux fois appliquée une fois ; opération dans un mois verrouillé placée en écriture tardive ; mode hors ligne refusé aux rôles en ligne | Ordre perturbé, coupure en plein lot, conflits champ par champ, navigateur en mode hors ligne |
+| Passerelle simulée | Signature invalide refusée et journalisée ; montant confirmé pris chez l'opérateur ; notification idempotente ; identifiant de transaction à usage unique | Notifications en retard ou absentes, consultations à 1, 5, 15 et 60 minutes, relevé avec écarts |
+| Indicateurs | Une valeur absente n'est pas zéro | Comparaison au jeu de référence, au chiffre près, pour chaque fiche |
+| Bout en bout, statique, migrations | Contrôle des migrations manquantes | Scénarios SC-01 à SC-09 en navigateur (après les écrans), analyse des dépendances et des secrets, rejeu et annulation des migrations, mesure de la couverture |
+
+La suite compte aujourd'hui vingt-deux fonctions de test, dont l'une est générée pour chaque cellule de la Matrice.
 
 ## 5. C2 Recette fonctionnelle
 

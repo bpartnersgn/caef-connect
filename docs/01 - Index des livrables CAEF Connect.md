@@ -1,10 +1,10 @@
 # Index des livrables CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026
 
 ## 1. Documents de conception produits
 
-Cette page rassemble le dossier de conception de CAEF Connect. Les huit documents sont rédigés, cohérents entre eux et à valider ; ils reprennent les mêmes identifiants d'exigences, de rôles, d'entités et d'indicateurs, si bien qu'une exigence du PRD se suit jusqu'à son cas de test. Mise à jour du 12/10/2026 : tous intègrent le module boutique et les rôles de responsable adjoint de centre, de comptable de centre et de vendeur ou vendeuse de boutique, demandés par le porteur de projet ; la place de la boutique dans les lots est tranchée (H14). Mise à jour suivante du 12/10/2026 : pilote dans un seul centre, le CAEF Cameroun à Dixinn (A1), RSE et boutique dans le lot 1 du pilote (A14, H14), crèche reportée (A3), source unique des chiffres entre comptable et responsable (SRC-01 à SRC-04), et ajout du document Budget et modèle économique ; ces décisions du porteur de projet sont à formaliser par la Direction Générale. Mise à jour du 13/10/2026 : le hors ligne d'abord avec synchronisation automatique (OFF-01 à OFF-08) et le paiement par Mobile Money de la scolarité et des services associés (PAY-01 à PAY-13, H15, H16), demandés par le porteur de projet comme exigences d'architecture, sont intégrés dans tous les documents, à commencer par le DAT ; ils restent à formaliser par la Direction Générale. Le même jour, les rôles de l'outil ont été calés sur l'organigramme des centres, avec l'ajout du chef matériels (CMT), et les modules optionnels, dont la boutique et la salle d'exposition, peuvent être désactivés par centre (ADM-08, BOU-15).
+Cette page rassemble le dossier de conception de CAEF Connect. Les huit documents sont rédigés, cohérents entre eux et à valider ; ils reprennent les mêmes identifiants d'exigences, de rôles, d'entités et d'indicateurs, si bien qu'une exigence du PRD se suit jusqu'à son cas de test. Mise à jour du 12/10/2026 : tous intègrent le module boutique et les rôles de responsable adjoint de centre, de comptable de centre et de vendeur ou vendeuse de boutique, demandés par le porteur de projet ; la place de la boutique dans les lots est tranchée (H14). Mise à jour suivante du 12/10/2026 : pilote dans un seul centre, le CAEF Cameroun à Dixinn (A1), RSE et boutique dans le lot 1 du pilote (A14, H14), crèche reportée (A3), source unique des chiffres entre comptable et responsable (SRC-01 à SRC-04), et ajout du document Budget et modèle économique ; ces décisions du porteur de projet sont à formaliser par la Direction Générale. Mise à jour du 13/10/2026 : le hors ligne d'abord avec synchronisation automatique (OFF-01 à OFF-08) et le paiement par Mobile Money de la scolarité et des services associés (PAY-01 à PAY-13, H15, H16), demandés par le porteur de projet comme exigences d'architecture, sont intégrés dans tous les documents, à commencer par le DAT ; ils restent à formaliser par la Direction Générale. Le même jour, les rôles de l'outil ont été calés sur l'organigramme des centres, avec l'ajout du chef matériels (CMT), et les modules optionnels, dont la boutique et la salle d'exposition, peuvent être désactivés par centre (ADM-08, BOU-15). Mise à jour du 14/10/2026 : le backend du lot 1 est écrit (Django, API REST `/api/v1`, données fictives, tests de la Matrice, Docker, intégration continue), et les documents sont alignés sur ce qui a réellement été implémenté. Chaque document signale les écarts et les choix de mise en œuvre dans une section datée du 14/10/2026 : paramètres des points ouverts (Brief § 5), lectures restrictives de la Matrice (Matrice § 5), tables techniques ajoutées (Modèle § 10), routes de l'API et déploiement (DAT § 4.2 et § 7), indicateurs calculés (Référentiel § 1) et tests automatisés (Plan de tests § 4).
 
 | Document | Ce qu'il fixe | Statut | Lien |
 | --- | --- | --- | --- |
@@ -19,7 +19,15 @@ Cette page rassemble le dossier de conception de CAEF Connect. Les huit document
 
 Ordre de lecture conseillé : le PRD pour le pourquoi et le quoi, la SFD pour le comment fonctionnel, puis la Matrice et le Modèle qui la précisent, le DAT pour le comment technique, le Référentiel pour les chiffres, le Plan de tests pour la preuve, et le Budget pour le coût et le financement.
 
-**Pour l'équipe de réalisation :** le [Brief de démarrage développeur](https://claude.ai/code/artifact/b71523e7-1a3a-4944-8f60-ab0ae4ff66fc) se lit en premier. Il donne les règles non négociables, l'ordre de construction du lot 1 et les positions d'attente à coder en attendant les décisions.
+**Pour l'équipe de réalisation :** le [Brief de démarrage développeur](https://claude.ai/code/artifact/b71523e7-1a3a-4944-8f60-ab0ae4ff66fc) se lit en premier. Il donne les règles non négociables, l'ordre de construction du lot 1, son avancement et les positions d'attente à coder en attendant les décisions.
+
+**Code.** Le dépôt `bpartnersgn/caef-connect` contient ces documents (dossier `docs/`) et le backend (dossier `backend/`, branche `backend-lot1`, demande de fusion n° 1). Trois fichiers y complètent le dossier de conception :
+
+| Fichier | Ce qu'il fixe |
+| --- | --- |
+| `AGENTS.md` (et `CLAUDE.md`, qui y renvoie) | Les treize règles non négociables et la façon de travailler, pour les développeurs et les assistants de code IA |
+| `backend/README.md` | Démarrage local, tests, organisation des applications |
+| `backend/DECISIONS.md` | Points ouverts devenus paramètres, lectures restrictives là où la SFD et la Matrice divergent, choix de mise en œuvre, ce que le lot ne couvre pas |
 
 ## 2. Documents sources
 
@@ -57,17 +65,17 @@ Sur les vingt livrables attendus à l'issue du cadrage et de la conception, onze
 | 16 | Budget et modèle économique | Budget et modèle économique | Structure et scénarios rédigés ; montants à chiffrer sur devis |
 | 17 | Tableau des risques | Risques produit du PRD § 9.2, risques du Plan § 10 | Partiel ; tableau unique à consolider |
 | 18 | Référentiel des indicateurs | Référentiel des indicateurs | Rédigé |
-| 19 | Documentation utilisateur | Aucun | À produire pendant la réalisation |
+| 19 | Documentation utilisateur | Aucun ; documentation technique du backend dans le dépôt (README, DECISIONS.md, schéma OpenAPI) | À produire avec les écrans |
 | 20 | Procès-verbal de validation institutionnelle | Aucun | À établir en fin de conception |
 
 ## 4. Ce qu'il reste à décider et ordre de validation
 
-Le dossier est construit pour avancer sans attendre les arbitrages : chaque point ouvert a une position d'attente. Ces positions doivent toutefois être confirmées ou corrigées avant le développement, dans cet ordre.
+Le dossier est construit pour avancer sans attendre les arbitrages : chaque point ouvert a une position d'attente. Le développement du backend a commencé sur ces positions, chacune réglable sans code (Brief § 5). Elles doivent toutefois être confirmées ou corrigées avant la recette, dans cet ordre.
 
 1. **Décisions du DM § 22**, présentées dans le PRD comme hypothèses H1 à H16 (autorité institutionnelle, périmètre du MVP, hébergement, circuit de validation RSE, comptabilité, indicateurs, place du module boutique, politique tarifaire de la scolarité, passerelle Mobile Money et compte marchand) ; A1, A3, A14 et H14 ont été tranchés par le porteur de projet le 12/10/2026, le hors ligne (H11) et le Mobile Money (H9, A6) demandés le 13/10/2026 ; tous restent à formaliser, tout comme l'offre de TIKA pour financer le pilote. Instance : comité de pilotage et Direction Générale.
 2. **Écarts entre sources A1 à A16**, listés dans le PRD, dont la place du module RSE dans le lot 1 ou le lot 2 (A14).
 3. **Validation du PRD**, puis de la SFD, de la Matrice et du Modèle, qui en découlent.
-4. **Décisions techniques** du DAT détaillé (§ 10), dont la pile technique, l'hébergement, les objectifs de reprise, la durée maximale de travail hors ligne et la passerelle Mobile Money (option 2 proposée : 15 minutes de perte au plus, 8 heures ouvrées de reprise).
+4. **Décisions techniques** du DAT détaillé (§ 10), dont la pile technique (Django retenu pour le backend, à confirmer), l'hébergement, les objectifs de reprise, la durée maximale de travail hors ligne et la passerelle Mobile Money (option 2 proposée : 15 minutes de perte au plus, 8 heures ouvrées de reprise).
 5. **Points R1 à R7** du Référentiel des indicateurs et validation des fiches du lot 1.
 6. **Points à arbitrer du Plan de tests** (responsable de la recette, utilisateurs clés, test d'intrusion).
 

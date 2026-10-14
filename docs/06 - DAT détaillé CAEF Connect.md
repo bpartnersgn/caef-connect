@@ -1,6 +1,6 @@
 # DAT détaillé CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026 (mise en œuvre du backend du lot 1)
 
 ## 1. Objet, statut et sources
 
@@ -8,7 +8,7 @@ Ce DAT détaille l'architecture cible du DAT v1.0 pour le MVP et propose une sol
 
 | Élément | Valeur |
 | --- | --- |
-| Référence proposée | CAEF-CONNECT-DAT-002, version 0.2 (13/10/2026 : hors ligne d'abord et paiements Mobile Money) |
+| Référence proposée | CAEF-CONNECT-DAT-002, version 0.3 (13/10/2026 : hors ligne d'abord et paiements Mobile Money ; 14/10/2026 : mise en œuvre du backend du lot 1, sections 3.3, 4.2, 4.6 et 7.3) |
 | Documents d'entrée | DAT v1.0 (architecture cible) ; PRD (exigences non fonctionnelles, section 7) ; SFD du MVP ; Modèle et dictionnaire des données ; Matrice des rôles ; demandes du porteur de projet du 13/10/2026 (hors ligne d'abord, paiements Mobile Money) |
 | Périmètre | Lot 1 du pilote, qui comprend le socle, la RSE et le module boutique (A14 et H14 tranchées par le porteur de projet le 12/10/2026, à formaliser par la Direction Générale des CAEF), pour un seul centre pilote, le CAEF Cameroun (Dixinn, Conakry), qui part aujourd'hui du papier ; l'architecture accueille les lots 2 et 3 sans refonte |
 | Principes repris du DAT v1.0 | Centralisation maîtrisée, modularité, sécurité dès la conception, sobriété technique, interopérabilité justifiée, traçabilité, réversibilité, évolutivité nationale, adaptation au contexte, indépendance raisonnable vis-à-vis des fournisseurs |
@@ -58,6 +58,35 @@ La proposition est une application web unique, structurée en modules, à rendu 
 | Passerelle de paiement | Interface interne « passerelle Mobile Money » avec un adaptateur par agrégateur ou opérateur, plus un adaptateur déclaratif sans opérateur | Ajouter ou changer d'opérateur sans toucher les modules métier ; repli déclaratif tant que le contrat n'est pas signé | Intégration directe de l'API d'un seul opérateur, au prix d'une dépendance plus forte |
 
 Critères de choix appliqués (DAT v1.0 § 11) : maturité, compétences disponibles en Guinée, coût total sur cinq ans, sécurité, facilité de maintenance, documentation, portabilité des données, capacité de reporting, dépendance au fournisseur. Tous les composants proposés sont open source et remplaçables.
+
+### 3.3 Composants mis en œuvre au lot 1 (14/10/2026)
+
+Le backend du lot 1 (dépôt `bpartnersgn/caef-connect`, dossier `backend/`) applique la proposition de la section 3.1 avec Django. Les versions sont figées dans `backend/requirements.txt`.
+
+| Composant | Mise en œuvre |
+| --- | --- |
+| Application | Python 3.13, Django 5.2, Django REST framework 3.18, servis par Gunicorn (3 processus) dans une image Docker à utilisateur non privilégié |
+| Base de données | PostgreSQL 16 (pilote psycopg 3) ; schéma `pilotage` pour la table de synthèse des indicateurs |
+| Documents | django-storages et boto3 vers un stockage compatible S3 (MinIO en local) ; disque local seulement si aucun compartiment n'est configuré |
+| Tâches de fond | Celery 5.6 avec Redis 7 : un processus de travail et un planificateur (beat) |
+| Sécurité | Mots de passe Argon2, double authentification TOTP (PyOTP) avec codes de secours, champs restreints chiffrés (Fernet), sessions de 30 minutes d'inactivité et 8 heures au plus |
+| API | Schéma OpenAPI 3 généré par drf-spectacular, servi sous `/api/v1/schema/` |
+| Exports | Tableur (openpyxl) |
+| Frontal | Nginx 1.27 en proxy inverse ; TLS terminé en amont en production |
+| Écrans | Gabarits HTMX du back-office et application terrain PWA : non commencés |
+
+Les tâches planifiées sont les suivantes (heure du serveur) :
+
+| Tâche | Fréquence |
+| --- | --- |
+| Calcul des indicateurs (mois courant et mois précédent) | Chaque nuit à 1 h 00 |
+| Recalcul des paires de doublons | Chaque nuit à 1 h 30 |
+| Import et rapprochement des relevés de l'opérateur | Chaque nuit à 2 h 00 |
+| Suspension des comptes inactifs | Chaque nuit à 3 h 00 |
+| Engagements en retard, démarrage des sessions | Chaque nuit à 0 h 10 et 0 h 05 |
+| Création des clôtures mensuelles | Le 1er du mois à 0 h 30 |
+| Paiements « non retrouvés » | Toutes les heures, au quart |
+| Alerte des appareils en retard de synchronisation | Toutes les heures |
 
 ### 3.2 Options d'hébergement
 
@@ -114,6 +143,89 @@ Utilisateur, puis navigateur, puis proxy HTTPS, puis application (contrôleurs, 
 - **Protection :** validation de schéma des entrées, limitation du débit par utilisateur et par adresse, pagination obligatoire, clé d'idempotence sur les créations.
 - **Versions :** une rupture de contrat crée `/api/v2` ; la version précédente est maintenue six mois au moins après annonce.
 - **Environnement de test :** l'API de préproduction, avec données fictives, sert aux intégrateurs.
+
+**Mise en œuvre au lot 1 (14/10/2026).** L'API est servie sous `/api/v1/`, son schéma OpenAPI 3 sous `/api/v1/schema/`. Deux authentifications sont acceptées : la session du navigateur (cookie sécurisé, protection CSRF) et le jeton d'appareil enrôlé, qui n'ouvre que les routes de synchronisation et est refusé partout ailleurs. Le débit est limité à 600 requêtes par minute et par utilisateur, 60 par adresse non authentifiée et 10 tentatives de connexion par minute (paramètres `CAEF_DEBIT_*`). Les listes sont paginées par 25. Chaque vue déclare l'objet de la Matrice qu'elle expose ; le filtre de périmètre s'applique à toute lecture, et un identifiant hors périmètre renvoie un refus journalisé plutôt qu'un simple « introuvable ». Les vues ne portent aucune règle : elles lisent la requête, appellent le service métier et sérialisent la réponse.
+
+Routes hors ressources :
+
+| Route | Usage |
+| --- | --- |
+| `auth/connexion/`, `auth/deconnexion/`, `auth/moi/` | Session de l'utilisateur |
+| `auth/double-auth/<etape>/`, `auth/mot-de-passe/` | Enrôlement et vérification TOTP ; changement du mot de passe |
+| `documents/telecharger/<jeton>/` | Téléchargement par lien signé de courte durée (300 secondes par défaut), après contrôle des droits |
+| `paiements/notifications/<fournisseur>/` | Notifications des passerelles : signature invalide refusée (401) et journalisée, doublon accepté (200) sans effet |
+| `synchronisation/operations/` | Envoi des opérations de l'appareil par lots |
+| `synchronisation/changements/` | Réception des changements par curseur |
+| `synchronisation/rejets/` | « Mes rejets » de l'appareil |
+
+Ressources : toutes offrent la lecture en liste (`GET`), et en détail sauf `matrice`, `notifications` et `documents`, dans la limite des droits et du périmètre ; la colonne « Écriture » indique la création ou la modification directe, et la dernière colonne les actions métier, appelées en `POST` sauf mention contraire.
+
+| Ressource | Écriture | Actions métier |
+| --- | --- | --- |
+| **Administration** | | |
+| `/api/v1/utilisateurs/` | POST (création) | sur un objet : `statut` (POST), `reinitialiser-mot-de-passe` (POST) |
+| `/api/v1/centres/` | — | sur un objet : `modules` (GET) |
+| `/api/v1/referentiels/` | — | — |
+| `/api/v1/zones/` | — | — |
+| `/api/v1/periodes/` | — | — |
+| `/api/v1/affectations/` | POST (création) | sur un objet : `retirer` (POST) |
+| `/api/v1/interims/` | POST (création) | sur un objet : `interrompre` (POST) |
+| `/api/v1/modules-centre/` | POST (création) | sur la liste : `operations-en-cours` (GET); sur un objet : `valider` (POST) |
+| `/api/v1/matrice/` | — | — |
+| `/api/v1/journal/` | — | — |
+| `/api/v1/notifications/` | — | sur un objet : `lue` (POST) |
+| **Bénéficiaires** | | |
+| `/api/v1/beneficiaires/` | PATCH (modification) | sur la liste : `recherche-reseau` (POST), `export` (GET); sur un objet : `donnees-restreintes` (GET), `cloturer` (POST), `parcours` (GET) |
+| `/api/v1/candidatures/` | POST (création) | sur un objet : `soumettre` (POST), `demander-complement` (POST), `valider` (POST), `rejeter` (POST), `mettre-en-attente` (POST), `annuler` (POST), `lever-doute-doublon` (POST) |
+| `/api/v1/transferts/` | POST (création) | sur un objet : `decider` (POST) |
+| `/api/v1/doublons/` | — | sur un objet : `distinctes` (POST), `fusionner` (POST) |
+| `/api/v1/fusions/` | POST (création) | sur un objet : `annuler` (POST) |
+| **Formations** | | |
+| `/api/v1/formations/` | POST (création) | — |
+| `/api/v1/formateurs/` | — | — |
+| `/api/v1/sessions/` | POST (création); PATCH (modification) | sur un objet : `ouvrir` (POST), `cloturer` (POST), `annuler` (POST), `rouvrir` (POST), `seances` (POST), `inscrire` (POST), `propositions-cloture` (GET), `feuille-presence` (GET), `export` (GET) |
+| `/api/v1/seances/` | — | sur un objet : `presences` (POST) |
+| `/api/v1/inscriptions/` | — | sur un objet : `participation` (POST), `cheffe-de-classe` (POST), `statut-final` (POST), `evaluations` (POST), `attestation` (POST) |
+| `/api/v1/presences/` | — | — |
+| `/api/v1/evaluations/` | PATCH (modification) | — |
+| `/api/v1/attestations/` | — | sur un objet : `annuler` (POST) |
+| **Documents** | | |
+| `/api/v1/documents/` | POST (création) | sur un objet : `lien` (POST) |
+| **Partenariats** | | |
+| `/api/v1/partenaires/` | POST (création); PATCH (modification) | sur la liste : `proches` (GET); sur un objet : `interlocuteurs` (POST), `interactions` (POST) |
+| `/api/v1/interlocuteurs/` | — | — |
+| `/api/v1/interactions/` | — | — |
+| `/api/v1/opportunites/` | POST (création) | sur un objet : `etape` (POST), `clore` (POST), `fiches-projet` (POST), `historique` (GET) |
+| `/api/v1/fiches-projet/` | POST (création) | sur un objet : `qualifier` (POST) |
+| `/api/v1/programmes/` | POST (création) | — |
+| `/api/v1/propositions/` | POST (création); PATCH (modification) | sur un objet : `soumettre` (POST), `circuit` (GET et POST), `marquer-soumise` (POST), `reponse` (POST) |
+| `/api/v1/conventions/` | POST (création) | sur un objet : `approuver` (POST), `signer` (POST), `engagements` (POST), `contributions` (POST), `cloturer` (POST) |
+| `/api/v1/engagements/` | — | sur un objet : `realise` (POST), `valider` (POST), `abandonner` (POST) |
+| `/api/v1/contributions/` | — | sur la liste : `totaux` (GET); sur un objet : `reception` (POST), `valider` (POST), `rapprocher` (POST), `annuler` (POST) |
+| **Boutique** | | |
+| `/api/v1/points-de-vente/` | — | sur un objet : `tableau-de-bord` (GET), `montant-du` (GET) |
+| `/api/v1/produits/` | POST (création) | sur un objet : `prix` (GET et POST), `entree` (POST), `sortie` (POST), `transfert` (POST) |
+| `/api/v1/mouvements-stock/` | — | — |
+| `/api/v1/ventes/` | POST (création) | sur la liste : `export` (GET); sur un objet : `annuler` (POST) |
+| `/api/v1/caisses/` | POST (création) | sur un objet : `theoriques` (GET), `compter` (POST), `valider` (POST), `renvoyer` (POST) |
+| `/api/v1/inventaires/` | POST (création) | sur un objet : `comptage` (POST), `valider` (POST), `recompter` (POST) |
+| `/api/v1/reversements/` | POST (création) | sur un objet : `valider` (POST), `payer` (POST) |
+| **Scolarité et paiements** | | |
+| `/api/v1/services-payants/` | POST (création) | sur un objet : `tarifs` (GET et POST) |
+| `/api/v1/echeances/` | — | sur un objet : `exonerations` (POST) |
+| `/api/v1/exonerations/` | — | sur un objet : `decider` (POST) |
+| `/api/v1/situations/` | — | — |
+| `/api/v1/paiements/` | — | sur la liste : `especes` (POST), `demander` (POST), `declarer` (POST), `a-affecter` (GET), `totaux` (GET), `export` (GET); sur un objet : `affecter` (POST), `confirmer-manuellement` (POST), `remboursements` (POST) |
+| `/api/v1/releves-operateur/` | POST (création) | sur un objet : `motiver` (POST) |
+| `/api/v1/remboursements/` | — | sur un objet : `valider` (POST), `executer` (POST) |
+| **Pilotage** | | |
+| `/api/v1/clotures/` | POST (création) | sur un objet : `lignes` (GET), `pieces` (POST), `deroger-appareils` (POST), `verifier` (POST), `valider` (POST), `renvoyer` (POST) |
+| `/api/v1/indicateurs/` | — | — |
+| `/api/v1/fiches-indicateurs/` | — | sur un objet : `statut` (POST) |
+| `/api/v1/rapports/` | POST (création) | sur un objet : `valider` (POST), `transmettre` (POST) |
+| **Hors ligne** | | |
+| `/api/v1/appareils/` | POST (création) | sur un objet : `revoquer` (POST), `jeton` (POST) |
+| `/api/v1/conflits/` | — | sur un objet : `resoudre` (POST), `regulariser` (POST) |
 
 ### 4.3 Intégrations
 
@@ -214,6 +326,8 @@ Statuts d'un paiement : initié, en attente de la payeuse, confirmé, échoué, 
 | Secrets et environnements | Clés de la passerelle dans le coffre de secrets, rotation annuelle ; environnement de test de l'opérateur en développement et en préproduction ; aucun appel réel hors production |
 | Données personnelles | Numéro de la payeuse conservé avec la transaction (donnée nominative), jamais utilisé comme identifiant de personne (DAT-01) ; ni code secret ni solde du compte de la payeuse |
 | Réglementation | Compte marchand au nom de l'entité CAEF ; vérification d'identité des payeuses à la charge de l'opérateur ; avis juridique sur la réglementation de la Banque centrale de la République de Guinée applicable aux paiements marchands, avant la mise en service |
+
+**Mise en œuvre au lot 1 (14/10/2026).** L'interface interne est en place avec deux adaptateurs : `declaratif`, par défaut, et `simulateur`, une passerelle fictive signée par HMAC-SHA256 (en-tête `X-Signature`) pour les tests et la recette, interdite en production. L'adaptateur est choisi par la variable `CAEF_PASSERELLE_MOBILE_MONEY`. Les relevés de l'opérateur sont importés par fichier (CSV ou JSON) ; la tâche nocturne `importer_releves` attend le contrat de la passerelle (H16). Une transaction reçue sans référence d'échéance valide reste orpheline, puis est rattachée quand le paiement est déclaré avec son identifiant, sauf si `CAEF_CENTRE_PAIEMENTS_NON_REFERENCES` désigne un centre dont le comptable la reçoit. Le montant retenu est toujours celui de l'opérateur, et un identifiant de transaction ne sert qu'une fois.
 
 **Mise en service.** Le module paiements, son modèle de données, l'adaptateur déclaratif et le parcours C sont construits dans le lot 1. La facturation de la scolarité et les parcours A et B sont mis en service dès que la politique tarifaire (PRD H15) et le choix de la passerelle (H16) sont arrêtés, au plus tôt pendant le pilote, sans migration de données.
 
@@ -362,6 +476,21 @@ Trois environnements isolés, une chaîne de livraison automatisée et une super
 
 Un tableau de bord technique mensuel (disponibilité mesurée, incidents, temps de réponse, volumétrie) est remis au comité de pilotage.
 
+### 7.3 Mise en œuvre au lot 1 (14/10/2026)
+
+**Environnement local.** `backend/docker-compose.yml` lance sept services : `web` (Gunicorn), `worker` et `beat` (Celery), `postgres` (16), `redis` (7), `minio` (stockage S3) et `nginx`, exposé sur le port 8080. La configuration vient d'un fichier `.env` copié de `backend/.env.example`, sans aucune valeur réelle dans le dépôt ; le démarrage refuse de se lancer sans `DJANGO_SECRET_KEY`, `CAEF_CLE_CHIFFREMENT_CHAMPS`, ni mots de passe de la base et du stockage. La variable `CAEF_ENVIRONNEMENT` vaut `developpement`, `recette`, `preproduction` ou `production` ; le jeu de données fictives et le simulateur de paiement sont refusés en production.
+
+```bash
+cp .env.example .env            # puis remplir les secrets
+docker compose up -d
+docker compose exec web python manage.py migrate
+docker compose exec web python manage.py generer_donnees_fictives
+```
+
+**Intégration continue.** Le flux GitHub Actions `.github/workflows/backend.yml` s'exécute à chaque poussée sur la branche principale et à chaque demande de fusion qui touche `backend/`, la Matrice (`docs/04*`) ou le flux lui-même. Sur Python 3.13 et un service PostgreSQL 16, il enchaîne : analyse statique (`ruff check`), `manage.py check`, contrôle qu'aucune migration ne manque, puis la suite `pytest`. Les secrets de la CI sont des valeurs jetables, sans donnée réelle.
+
+**Reste à faire avant le pilote.** Les étapes 2 et 3 de la section 7.1 qui manquent encore : analyse des dépendances vulnérables, construction et publication de l'image, déploiement automatique en préproduction. S'y ajoutent l'environnement de préproduction lui-même, la terminaison TLS, la sauvegarde continue (section 6.2) et la supervision (section 7.2).
+
 ## 8. Performance, capacité et connectivité
 
 Le dimensionnement repose sur des hypothèses écrites, à remplacer par les chiffres du diagnostic ; elles sont volontairement hautes pour le pilote, qui ne compte qu'un centre, le CAEF Cameroun à Dixinn : les valeurs prévues pour deux centres sont conservées par prudence, afin que la recette de charge ait de la marge (DAT v1.0 § 8).
@@ -464,7 +593,7 @@ Quinze décisions du DAT v1.0 § 14 restent à prendre ; pour chacune, ce docume
 | --- | --- | --- | --- |
 | Hébergement et localisation | Option issue de l'avis juridique ; services managés à conformité égale ; sauvegardes sur un second site | 3.2 ; PRD H7 | Direction Générale |
 | Style d'architecture | Monolithe modulaire | 4 ; PRD H13 | Comité de pilotage |
-| Technologies et langages | Django ou Laravel selon le prestataire, rendu serveur pour le back-office ; application terrain en PWA avec un framework JavaScript léger | 3.1 | Comité, sur offres |
+| Technologies et langages | Django ou Laravel selon le prestataire, rendu serveur pour le back-office ; application terrain en PWA avec un framework JavaScript léger. Le backend du lot 1 est écrit en Django (section 3.3) | 3.1, 3.3 | Comité, sur offres |
 | Base de données | PostgreSQL | 3.1 | Comité |
 | Stockage documentaire | Stockage d'objets compatible S3, chiffré | 3.1, 6.1 | Comité |
 | Gestion des identités | Intégrée au framework, double authentification TOTP ; annuaire externe seulement si les CAEF en ont un | 5.1 | Comité |

@@ -1,6 +1,6 @@
 # Budget et modèle économique CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026
 
 ## 1. Objet et statut
 
@@ -8,13 +8,15 @@ Le budget de CAEF Connect n'est pas encore arrêté : il sera établi à l'issue
 
 Mise à jour du 13/10/2026 : le porteur de projet demande que la plateforme fonctionne sans accès à Internet, avec synchronisation automatique au retour du réseau, et qu'elle intègre le paiement par Mobile Money de la scolarité et des services associés (à formaliser par la Direction Générale). Ces deux exigences d'architecture ajoutent les postes C1.11 à C1.13, C2.5 à C2.7 et C4.10, et précisent l'équipement des appareils de terrain.
 
+Mise à jour du 14/10/2026 : le backend du lot 1 est écrit (Django, PostgreSQL, Celery et Redis, stockage S3, Docker Compose et intégration continue), sur données fictives. Il couvre la partie serveur des postes C1.3 à C1.5, C1.11 et C1.12 : services métier, droits, API, synchronisation côté serveur, paiements en mode déclaratif ou simulé, et une partie de C1.10 (conteneurs, intégration continue). Les devis de ces postes portent donc désormais sur ce qui reste : les écrans du back-office, l'application de terrain hors ligne, l'adaptateur de la passerelle retenue, la reprise des registres, la recette, la sécurité et le déploiement en préproduction et en production (Brief développeur, § 4). Aucun montant n'est modifié.
+
 | Point | Règle retenue dans ce document |
 | --- | --- |
 | Montants | Aucun montant n'est retenu à ce stade ; chaque poste est **à chiffrer sur devis**, auprès d'au moins deux prestataires ou fournisseurs, avec des prix relevés à Conakry |
 | Devises | Franc guinéen (GNF) pour la proposition consolidée ; devis en USD ou EUR acceptés ; pas de total mélangeant plusieurs devises sans taux daté |
 | Périmètre à chiffrer | Lot 1 du MVP : socle (centres, utilisateurs, bénéficiaires, formations, présences, tableaux de bord, rapports, sécurité), RSE, boutique et clôture mensuelle avec source unique des chiffres (SRC), fonctionnement hors ligne avec synchronisation automatique, scolarité et paiements Mobile Money ; crèche hors chiffrage (plus tard) |
 | Centre pilote | Un seul centre, le CAEF Cameroun (quartier Cameroun, commune de Dixinn, Conakry, Guinée) ; tout y est aujourd'hui sur papier (livrets, feuilles volantes) |
-| Architecture de référence | Celle proposée par le DAT : application web unique (Django ou Laravel), PostgreSQL, stockage de documents compatible S3, conteneurs Docker ; application de terrain installable (PWA) qui fonctionne hors ligne et se synchronise seule (DAT § 4.5) ; module de paiements relié à un agrégateur ou à un opérateur Mobile Money (DAT § 4.6) ; sauvegardes en option RPO 15 minutes et RTO 8 heures ouvrées |
+| Architecture de référence | Celle proposée par le DAT : application web unique (Django retenu pour le backend du lot 1), PostgreSQL, stockage de documents compatible S3, conteneurs Docker ; application de terrain installable (PWA) qui fonctionne hors ligne et se synchronise seule (DAT § 4.5) ; module de paiements relié à un agrégateur ou à un opérateur Mobile Money (DAT § 4.6) ; sauvegardes en option RPO 15 minutes et RTO 8 heures ouvrées |
 
 ## 2. Les quatre composantes
 

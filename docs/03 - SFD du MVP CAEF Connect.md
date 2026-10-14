@@ -1,6 +1,6 @@
 # SFD du MVP CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026 (mise en œuvre dans le backend, section 11)
 
 ## 1. Objet, périmètre et conventions
 
@@ -8,7 +8,7 @@ Cette SFD décrit, pour chaque fonction du MVP, les écrans, les champs, les act
 
 | Élément | Valeur |
 | --- | --- |
-| Référence proposée | CAEF-CONNECT-SFD-001, version 0.2 |
+| Référence proposée | CAEF-CONNECT-SFD-001, version 0.2 ; section 11 complétée le 14/10/2026 par la mise en œuvre dans le backend du lot 1 |
 | Documents d'entrée | PRD CAEF Connect ; Document Maître (DM) ; Cahier des charges fonctionnel (CDC) ; Dossier d'architecture technique (DAT) ; Plan de déploiement |
 | Périmètre | Lot 1 livré au pilote (socle opérationnel, puis RSE et boutique construites en parallèle après le socle), soit toutes les exigences P0 et P1 du PRD, y compris le module boutique et salle d'exposition (BOU-01 à BOU-11, BOU-15), l'activation des modules par centre (ADM-08), la source unique et la clôture mensuelle (SRC-01 à SRC-04) et les exigences USR-09 et CTR-09, ajoutés à la demande du porteur de projet (H14 tranchée), ainsi que le hors ligne d'abord (OFF-01 à OFF-08) et la scolarité et les paiements, dont le Mobile Money (PAY-01 à PAY-11), demandés le 13/10/2026 ; pilote dans un seul centre, le CAEF Cameroun (quartier Cameroun, commune de Dixinn, Conakry) |
 | Hors périmètre | Exigences P2 et P3 du PRD (dont BOU-12 à BOU-14 : consolidation nationale boutique, codes-barres, plusieurs points de vente, coût de revient, vente en ligne ; PAY-12 et PAY-13 : reversements payés par Mobile Money, carte bancaire) ; modules crèches (prévus plus tard, A3 tranchée), communication publique, insertion, entrepreneuriat, portails externes |
@@ -765,6 +765,39 @@ Douze valeurs de cette SFD sont des propositions par défaut à confirmer par le
 | PO-12 | Modules optionnels activés au pilote ; usage de la salle d'exposition | Tous activés au CAEF Cameroun ; vente possible depuis la salle d'exposition | Porteur de projet et Direction Générale |
 
 Le porteur de projet a tranché le 12/10/2026 quatre points du PRD : un seul centre pilote, le CAEF Cameroun à Dixinn (A1) ; la RSE dans le lot 1 (A14) ; la boutique dans le lot 1 (H14) ; la crèche reportée à plus tard (A3). Ces décisions restent à formaliser par la Direction Générale des CAEF ; les autres écarts du PRD restent ouverts. Le diagnostic du CAEF Cameroun doit établir s'il pratique le dépôt-vente et avec quelle part du centre, qui tient la caisse aujourd'hui, si la comptable est propre au centre ou mutualisée, quels modes de règlement sont utilisés et quels registres papier existent pour la reprise. Les demandes du 13/10/2026 (hors ligne d'abord, paiements Mobile Money) restent aussi à formaliser ; le diagnostic relève la couverture réseau du centre et les opérateurs Mobile Money utilisés par les payeuses (H16). Les rôles d'adjoint et de comptable et les circuits de validation des clôtures de caisse et des clôtures mensuelles sont à confirmer par la Direction Générale.
+
+### Mise en œuvre dans le backend du lot 1 (14/10/2026)
+
+Le backend du lot 1 applique les règles de cette SFD dans les services métier (`services.py` de chaque module) et les expose par l'API REST décrite au DAT, § 4.2 ; les écrans E-xxx restent à construire. Chaque point ouvert ci-dessus y est un paramètre réglable sans code (variable d'environnement, ou table administrée) :
+
+| N° | Paramètre du backend | Valeur par défaut |
+| --- | --- | --- |
+| PO-01 | `CHAMPS_REQUIS_DOSSIER` | nom, prénoms, sexe, zone de résidence, date et mode du consentement, naissance (date, année ou tranche d'âge) |
+| PO-02 | `CAEF_SEUIL_DOUBLON_BLOQUANT`, `CAEF_SEUIL_DOUBLON_INFORMATIF` | 60 ; 40 |
+| PO-03 | `CAEF_SEUIL_PRESENCE_DEFAUT`, et seuil propre à chaque formation | 80 % |
+| PO-04 | `CAEF_DELAI_SAISIE_PRESENCES_JOURS`, `CAEF_ABSENCES_CONSECUTIVES_ALERTE` | 7 jours ; 3 absences |
+| PO-05 | `CAEF_SEUIL_SECONDE_VALIDATION_PROPOSITION` | Vide : pas de seconde validation par la DG tant que le seuil n'est pas fixé |
+| PO-06 | `CAEF_INACTIVITE_COMPTE_JOURS`, `CAEF_JOURS_INACTIVITE_DOSSIER` | 90 jours ; 365 jours |
+| PO-07 | Champ `consentement_mode` du dossier, liste fermée | Écrit ou oral devant témoin |
+| PO-08 | `CAEF_CLOTURE_MENSUELLE_JOUR_LIMITE` | Le 10 du mois suivant |
+| PO-09 | `CAEF_HORS_LIGNE_VALIDITE_HEURES`, `CAEF_ALERTE_SYNCHRO_HEURES` | 72 heures ; 48 heures |
+| PO-10 | `CAEF_PAIEMENT_NON_RETROUVE_HEURES` | 24 heures |
+| PO-11 | Aucun paramètre : un impayé n'empêche ni l'inscription ni la présence | Aucun blocage |
+| PO-12 | Table `module_centre`, administrée par l'ADM | Tous les modules optionnels activés au CAEF Cameroun dans les données fictives |
+
+Les tarifs de la scolarité (H15) sont saisis dans la table `tarif_service` ; sans tarif en vigueur, aucune échéance n'est créée. La passerelle Mobile Money (H16) est choisie par `CAEF_PASSERELLE_MOBILE_MONEY`, en mode `declaratif` par défaut.
+
+Là où cette SFD et la Matrice divergent, le backend retient la lecture la plus restrictive : annulation d'une vente par le CPT seul, annulation d'une candidature avec le droit A (RC, ou RA en intérim), file « À résoudre » scindée entre conflits (RC, RA) et écritures tardives (CPT), et les autres points listés dans la Matrice, § 5.1. Quelques règles reçoivent une précision de mise en œuvre, notée dans `backend/DECISIONS.md` :
+
+- **Doublons (RG-BEN-04).** Une date de naissance connue à l'année près ne compare que l'année, et seulement si les deux dossiers sont à cette précision. Le téléphone seul ne donne aucun point.
+- **Fusion (RG-BEN-05).** Elle est annulable pendant 30 jours : l'état avant fusion est conservé.
+- **Numérotation des reçus (RG-BOU, OFF-08).** Une série par appareil, au numéro continu. En ligne sans appareil, la série est `<centre>-W` pour les ventes et `<centre>-P` pour les paiements. Un numéro sauté est consigné comme vente annulée de total nul, et les contre-écritures d'annulation prennent la série `ANN`.
+- **Reversements.** L'arrondi au franc se fait à la fin du calcul, au demi supérieur.
+- **Écriture tardive régularisée (RG-SRC-03, OFF-05).** Elle est rejouée au nom de l'auteur d'origine, dans la série web, datée du mois courant avec le mois corrigé. Le numéro d'appareil non utilisé est consigné comme annulé.
+- **Clôture mensuelle.** Le RC peut accorder une dérogation pour clôturer malgré un appareil non synchronisé ; la dérogation est tracée sur la clôture.
+- **Notifications de paiement (RG-PAY).** Une signature invalide est refusée et journalisée, un doublon est accepté sans effet, et le montant retenu est celui de l'opérateur.
+
+Ne sont pas couverts par ce lot : la lecture de l'historique d'un dossier par le centre d'origine après un transfert, et le volet boutique du tableau de bord national pour la DG, prévu au lot 2.
 
 ### Traçabilité PRD vers SFD
 
