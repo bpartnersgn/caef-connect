@@ -1,0 +1,354 @@
+# Matrice des rôles et permissions CAEF Connect, en fichier de données.
+#
+# Source : docs/04 - Matrice des rôles et permissions (version du 13/10/2026).
+# Ce fichier est la seule source des droits : la table `permission`, les contrôles
+# côté serveur et les tests de droits (un test par cellule) en sont dérivés.
+# Tout droit absent est refusé (principe de moindre privilège).
+#
+# Syntaxe d'une cellule : actions séparées par des espaces, puis le périmètre entre parenthèses.
+#   Actions  : L consulter, C créer, M modifier, V valider, E exporter, A archiver ou clôturer.
+#   V*       : validation que le RA n'exerce que pendant un intérim déclaré (règle 6).
+#   V~       : validation « à défaut de CPT » (clôture de caisse) : seulement si le centre
+#              n'a aucun comptable actif.
+#   Périmètre: (s) ses sessions, (c) ses centres (par défaut), (n) réseau,
+#              (ag) agrégé sans données nominatives, (p) sa propre fiche.
+#
+# `module` : socle (toujours actif) ou module optionnel activable par centre (règle 9) :
+#   boutique, salle_exposition, scolarite_paiements, rse_centre.
+# `centre` : faux pour un objet national, sans centre (référentiels, catalogue national…).
+
+version: "2026-10-13"
+
+roles:
+  ADM: {libelle: Administrateur national, titre: Administrateur national, double_auth: obligatoire, hors_ligne: false}
+  DG:  {libelle: Direction Générale, titre: Direction Générale, double_auth: obligatoire, hors_ligne: false}
+  RC:  {libelle: Responsable de centre, titre: Responsable du centre, double_auth: recommandee, hors_ligne: true}
+  RA:  {libelle: Responsable adjoint de centre, titre: Adjoint du responsable, double_auth: recommandee, hors_ligne: true}
+  AA:  {libelle: Agent administratif, titre: Assistante de la responsable du centre, double_auth: non, hors_ligne: true}
+  RP:  {libelle: Responsable pédagogique, titre: Responsable pédagogique, double_auth: non, hors_ligne: true}
+  FO:  {libelle: Formateur, titre: Moniteur, double_auth: non, hors_ligne: true}
+  RSE: {libelle: Responsable RSE et partenariats, titre: Responsable RSE et partenariats, double_auth: recommandee, hors_ligne: false}
+  SE:  {libelle: Responsable suivi-évaluation, titre: Responsable suivi-évaluation, double_auth: recommandee, hors_ligne: false}
+  CPT: {libelle: Comptable de centre, titre: Chef comptable, double_auth: obligatoire, hors_ligne: true}
+  VB:  {libelle: Vendeur ou vendeuse de boutique, titre: Gérante de la salle d'exposition et de la boutique, double_auth: non, hors_ligne: true, module: boutique}
+  CMT: {libelle: Chef matériels, titre: Chef matériels, double_auth: non, hors_ligne: false}
+
+# Rôles qui gardent la consultation de l'historique d'un module désactivé (règle 9).
+lecture_historique_module_inactif: [DG, RC, RA, CPT, SE]
+
+objets:
+  # ---------------------------------------------------------------- 3.1 Administration
+  centre:
+    libelle: Centres
+    module: socle
+    droits: {ADM: "L C M A (n)", DG: "L (n)", RC: "L", RA: "L", AA: "L", RP: "L", RSE: "L (n)", SE: "L (n)", CMT: "L"}
+  referentiel:
+    libelle: Référentiels nationaux
+    module: socle
+    centre: false
+    droits: {ADM: "L (n)", DG: "L C M A (n)", RC: "L (n)", RA: "L (n)", AA: "L (n)", RP: "L (n)", RSE: "L (n)", SE: "L (n)"}
+  periode:
+    libelle: Périodes et campagnes
+    module: socle
+    centre: false
+    droits: {ADM: "L C M A (n)", DG: "L V (n)", RC: "L (n)", RA: "L (n)", AA: "L (n)", RP: "L (n)", RSE: "L (n)", SE: "L (n)"}
+  utilisateur:
+    libelle: Utilisateurs et affectations
+    module: socle
+    droits: {ADM: "L C M A (n)", DG: "L (n)", RC: "L", RA: "L"}
+  role_permission:
+    libelle: Rôles et permissions
+    module: socle
+    centre: false
+    droits: {ADM: "L (n)", DG: "L (n)"}
+  parametre_securite:
+    libelle: Paramètres de sécurité
+    module: socle
+    centre: false
+    droits: {ADM: "L M (n)", DG: "L (n)"}
+  journal_audit:
+    libelle: Journal d'activité
+    module: socle
+    droits: {ADM: "L E (n)", DG: "L (n)", RC: "L", RA: "L", SE: "L (n)"}
+  appareil:
+    libelle: Appareils (enrôlement, révocation)
+    module: socle
+    droits: {ADM: "L C A (n)", RC: "L C A", RA: "L", CMT: "L"}
+  conflit_synchronisation:
+    libelle: File « À résoudre », conflits de synchronisation
+    module: socle
+    droits: {RC: "L V", RA: "L V"}
+  ecriture_tardive:
+    libelle: File « À résoudre », écritures tardives
+    module: socle
+    droits: {CPT: "L V"}
+  module_centre:
+    libelle: Modules du centre (activation et désactivation)
+    module: socle
+    droits: {ADM: "L M (n)", DG: "L V (n)", RC: "L", RA: "L", SE: "L (n)"}
+  interim:
+    # Absent du tableau de la Matrice ; dérivé de RG-ADM-13 et du menu Administration (SFD 2.1).
+    libelle: Intérims du responsable de centre
+    module: socle
+    droits: {ADM: "L C M (n)", RC: "L C M", RA: "L"}
+
+  # ---------------------------------------------------------------- 3.2 Bénéficiaires
+  beneficiaire:
+    libelle: Dossier, identité et coordonnées
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L C M A", RA: "L C M A", AA: "L C M", RP: "L", FO: "L (s)", RSE: "L (ag)", SE: "L"}
+  beneficiaire_restreint:
+    libelle: Données restreintes (pièce d'identité, contact d'urgence)
+    module: socle
+    nominatif: true
+    droits: {RC: "L M", RA: "L M", AA: "L C M", SE: "L"}
+  candidature:
+    libelle: Candidature
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L V A", RA: "L V* A", AA: "L C M", RP: "L", SE: "L"}
+  piece_justificative:
+    libelle: Pièces justificatives
+    module: socle
+    nominatif: true
+    droits: {RC: "L C A", RA: "L C A", AA: "L C", SE: "L"}
+  recherche_reseau:
+    libelle: Recherche réseau (anti-doublon), champs minimaux
+    module: socle
+    reseau: true  # (n) vaut pour tout le réseau, quelle que soit l'affectation (RG-BEN-01)
+    droits: {RC: "L (n)", RA: "L (n)", AA: "L (n)", SE: "L (n)"}
+  fusion:
+    libelle: Fusion de doublons
+    module: socle
+    nominatif: true
+    droits: {RC: "V", RA: "V*", AA: "L", SE: "V (n)"}
+  transfert:
+    libelle: Transfert entre centres
+    module: socle
+    nominatif: true
+    droits: {RC: "C V", RA: "C V*", AA: "L", SE: "L (n)"}
+  import_beneficiaires:
+    libelle: Import de données
+    module: socle
+    droits: {ADM: "C (n)", RC: "L", RA: "L", SE: "V (n)"}
+  export_nominatif:
+    libelle: Export nominatif
+    module: socle
+    nominatif: true
+    droits: {RC: "E", RA: "E", RP: "E", SE: "E"}
+  deposante_identite:
+    # Règle 7 : identité minimale d'une productrice déposante, sans accès au dossier.
+    libelle: Productrice déposante, identité minimale
+    module: boutique
+    nominatif: true
+    droits: {RC: "L", RA: "L", CPT: "L", VB: "L"}
+
+  # ---------------------------------------------------------------- 3.3 Formations
+  formation_nationale:
+    libelle: Catalogue, formations nationales
+    module: socle
+    centre: false
+    droits: {DG: "L C M A (n)", RC: "L (n)", RA: "L (n)", AA: "L (n)", RP: "L (n)", FO: "L (s)", RSE: "L (n)", SE: "L (n)"}
+  formation_centre:
+    libelle: Catalogue, formations du centre
+    module: socle
+    droits: {DG: "L (n)", RC: "L V", RA: "L V*", AA: "L", RP: "L C M A", FO: "L (s)", RSE: "L (n)", SE: "L (n)"}
+  session:
+    libelle: Sessions et séances
+    module: socle
+    droits: {DG: "L (ag)", RC: "L A", RA: "L A", AA: "L", RP: "L C M A", FO: "L (s)", RSE: "L (ag)", SE: "L", CMT: "L"}
+  formateur:
+    libelle: Formateurs
+    module: socle
+    droits: {RC: "L", RA: "L", RP: "L C M A", FO: "L (p)", SE: "L"}
+  inscription:
+    libelle: Inscriptions
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L", RA: "L", AA: "L", RP: "L C M", FO: "L (s)", SE: "L"}
+  presence:
+    libelle: Présences
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L", RA: "L", AA: "L", RP: "L C M", FO: "L C M (s)", SE: "L"}
+  evaluation:
+    libelle: Évaluations et résultats
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L V", RA: "L V*", RP: "L C M V", FO: "L C M (s)", SE: "L"}
+  attestation:
+    libelle: Attestations
+    module: socle
+    nominatif: true
+    droits: {DG: "L (ag)", RC: "L", RA: "L", AA: "L", RP: "L C V", SE: "L"}
+  export_formation:
+    libelle: Export listes et résultats
+    module: socle
+    nominatif: true
+    droits: {RC: "E", RA: "E", RP: "E", SE: "E"}
+
+  # ---------------------------------------------------------------- 3.4 Partenaires, RSE et pilotage
+  partenaire:
+    libelle: Partenaires
+    module: socle
+    droits: {DG: "L (n)", RC: "L C", RA: "L C", RSE: "L C M A (n)", SE: "L (n)"}
+  interlocuteur:
+    libelle: Interlocuteurs et interactions
+    module: socle
+    droits: {DG: "L (n)", RC: "L C", RA: "L C", RSE: "L C M (n)", SE: "L (n)"}
+  opportunite:
+    libelle: Opportunités et pipeline
+    module: socle
+    droits: {DG: "L (n)", RC: "L", RA: "L", RSE: "L C M A (n)", SE: "L (n)"}
+  fiche_projet:
+    libelle: Fiches projet des centres
+    module: rse_centre
+    droits: {DG: "L (n)", RC: "L C M", RA: "L C M", RP: "L", RSE: "L V (n)", SE: "L (n)"}
+  programme:
+    libelle: Programmes
+    module: socle
+    droits: {DG: "L C M A (n)", RC: "L", RA: "L", RP: "L", RSE: "L (n)", SE: "L (n)"}
+  proposition:
+    libelle: Propositions
+    module: socle
+    droits: {DG: "L V (n)", RC: "L V", RA: "L V*", RSE: "L C M (n)", SE: "L (n)"}
+  convention:
+    libelle: Conventions
+    module: socle
+    droits: {DG: "L V (n)", RC: "L", RA: "L", RSE: "L C M A (n)", SE: "L (n)"}
+  engagement:
+    libelle: Engagements
+    module: socle
+    droits: {DG: "L (n)", RC: "L M", RA: "L M", RSE: "L C M V (n)", SE: "L (n)"}
+  contribution:
+    libelle: Contributions, saisie de réception
+    module: socle
+    droits: {DG: "L (n)", RC: "L", RA: "L", RSE: "L C M (n)", SE: "L (n)", CPT: "L M"}
+  contribution_validation:
+    libelle: Contributions, validation
+    module: socle
+    droits: {DG: "V (n)"}
+  tdb_national:
+    libelle: Tableau de bord national
+    module: socle
+    centre: false
+    droits: {DG: "L E (n)", RSE: "L (n)", SE: "L E (n)"}
+  tdb_centre:
+    libelle: Tableau de bord de centre
+    module: socle
+    droits: {DG: "L (n)", RC: "L E", RA: "L E", AA: "L", RP: "L", SE: "L", CPT: "L"}
+  tdb_rse:
+    libelle: Tableau de bord RSE
+    module: socle
+    droits: {DG: "L E (n)", RC: "L", RA: "L", RSE: "L E (n)", SE: "L (n)"}
+  rapport_centre:
+    libelle: Rapport de centre
+    module: socle
+    droits: {DG: "L (n)", RC: "L C V E", RA: "L C V* E", RP: "C", SE: "L E"}
+  rapport_national:
+    libelle: Rapport national
+    module: socle
+    centre: false
+    droits: {DG: "L V E (n)", SE: "L C E (n)"}
+  rapport_partenaire:
+    libelle: Rapport partenaire
+    module: socle
+    droits: {DG: "L V (n)", RC: "L", RA: "L", RSE: "L C E (n)", SE: "L (n)"}
+  fiche_indicateur:
+    libelle: Fiches d'indicateurs
+    module: socle
+    centre: false
+    droits: {DG: "L V (n)", RC: "L (n)", RA: "L (n)", AA: "L (n)", RP: "L (n)", RSE: "L (n)", SE: "L C M (n)"}
+
+  # ---------------------------------------------------------------- 3.5 Boutique et salle d'exposition
+  produit:
+    libelle: Catalogue et prix
+    module: boutique
+    droits: {RC: "L C M A", RA: "L C M A", CPT: "L", VB: "L"}
+  stock_entree:
+    libelle: Entrées en stock et dépôts
+    module: boutique
+    droits: {RC: "L C", RA: "L C", CPT: "L", VB: "L C"}
+  vente:
+    libelle: Ventes et reçus
+    module: boutique
+    droits: {RC: "L", RA: "L", CPT: "L", VB: "L C"}
+  vente_annulation:
+    libelle: Annulation de vente
+    module: boutique
+    droits: {RC: "L", RA: "L", CPT: "A"}
+  caisse:
+    libelle: Caisse (ouverture et comptage)
+    module: boutique
+    droits: {RC: "L", RA: "L", CPT: "L", VB: "C"}
+  caisse_validation:
+    libelle: Clôture de caisse (validation)
+    module: boutique
+    droits: {RC: "L V~", RA: "L V~", CPT: "L V"}
+  inventaire_comptage:
+    libelle: Inventaire (comptage)
+    module: boutique
+    droits: {RC: "L C", RA: "L C", CPT: "L", VB: "C"}
+  inventaire_validation:
+    libelle: Inventaire (validation de l'ajustement)
+    module: boutique
+    droits: {RC: "L V", RA: "L V", CPT: "L"}
+  reversement_preparation:
+    libelle: Reversements (préparation)
+    module: boutique
+    droits: {RC: "L", RA: "L", CPT: "L C"}
+  reversement_validation:
+    libelle: Reversements (validation et paiement)
+    module: boutique
+    droits: {RC: "L V", RA: "L V", CPT: "M"}
+  tdb_boutique:
+    libelle: Volet boutique du tableau de bord
+    module: boutique
+    droits: {RC: "L E", RA: "L E", SE: "L (ag)", CPT: "L E"}
+  export_boutique:
+    libelle: Export journal des ventes, clôtures et reversements
+    module: boutique
+    droits: {RC: "E", RA: "E", CPT: "E"}
+  cloture_mensuelle:
+    libelle: Clôture mensuelle du centre (SRC-02)
+    module: socle
+    droits: {DG: "L (ag)", RC: "L V", RA: "L V*", SE: "L", CPT: "L C"}
+  salle_exposition:
+    libelle: Salle d'exposition (articles exposés, transferts)
+    module: salle_exposition
+    droits: {RC: "L", RA: "L", CPT: "L", VB: "L C"}
+
+  # ---------------------------------------------------------------- 3.6 Scolarité et paiements
+  service_tarif:
+    libelle: Services et tarifs
+    module: scolarite_paiements
+    droits: {ADM: "L C M A (n)", DG: "L (n)", RC: "L", RA: "L", AA: "L", SE: "L (n)", CPT: "L", CMT: "L"}
+  echeance:
+    libelle: Échéances et situation de paiement d'une bénéficiaire
+    module: scolarite_paiements
+    droits: {DG: "L (ag)", RC: "L", RA: "L", AA: "L", SE: "L", CPT: "L"}
+  exoneration:
+    libelle: Exonérations et prises en charge
+    module: scolarite_paiements
+    droits: {DG: "L (ag)", RC: "L V", RA: "L V*", AA: "L C", SE: "L", CPT: "L C"}
+  encaissement:
+    libelle: Encaissement (espèces, demande de paiement, déclaration Mobile Money)
+    module: scolarite_paiements
+    droits: {RC: "L", RA: "L", AA: "L C", CPT: "L C"}
+  paiement_a_affecter:
+    libelle: Paiements à affecter
+    module: scolarite_paiements
+    droits: {RC: "L", RA: "L", CPT: "L M"}
+  rapprochement_operateur:
+    libelle: Rapprochement quotidien avec l'opérateur
+    module: scolarite_paiements
+    droits: {RC: "L", RA: "L", CPT: "L M"}
+  remboursement:
+    libelle: Remboursements
+    module: scolarite_paiements
+    droits: {RC: "L V", RA: "L V*", CPT: "L C"}
+  export_paiements:
+    libelle: Export des paiements
+    module: scolarite_paiements
+    droits: {RC: "E", RA: "E", CPT: "E"}

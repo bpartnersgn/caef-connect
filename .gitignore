@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+.env
+*.env
+!.env.example
+/backend/media/
+/backend/staticfiles/
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+/backend/stockage/
