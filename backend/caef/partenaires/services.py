@@ -15,8 +15,18 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import difference, instantane, journaliser
 from caef.notifications.services import notifier
 
-from .models import (DERNIERE_ETAPE_MANUELLE, ETAPES_PIPELINE, FicheProjet, HistoriqueEtape, Interaction,
-                     Interlocuteur, Opportunite, Partenaire, StatutFicheProjet, StatutOpportunite)
+from .models import (
+    DERNIERE_ETAPE_MANUELLE,
+    ETAPES_PIPELINE,
+    FicheProjet,
+    HistoriqueEtape,
+    Interaction,
+    Interlocuteur,
+    Opportunite,
+    Partenaire,
+    StatutFicheProjet,
+    StatutOpportunite,
+)
 
 
 def _raison_normalisee(texte):

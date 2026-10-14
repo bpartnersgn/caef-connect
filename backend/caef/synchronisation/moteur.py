@@ -26,8 +26,13 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import journaliser, journaliser_refus
 from caef.notifications.services import notifier
 
-from .models import (ConflitSynchronisation, JournalChangements, NatureChangement, OperationSynchronisation,
-                     ResultatOperation)
+from .models import (
+    ConflitSynchronisation,
+    JournalChangements,
+    NatureChangement,
+    OperationSynchronisation,
+    ResultatOperation,
+)
 from .services import roles_hors_ligne
 
 
@@ -54,9 +59,11 @@ def op_candidature_creer(u, d, op):
         for cle in ("date_naissance", "consentement_date"):
             if identite.get(cle):
                 identite[cle] = _date(identite[cle])
-        for cle in ("zone_residence", "niveau_etudes", "situation_entree"):
+        for cle, chemin in (("zone_residence", "referentiels.ZoneTerritoriale"),
+                            ("niveau_etudes", "referentiels.ReferentielValeur"),
+                            ("situation_entree", "referentiels.ReferentielValeur")):
             if identite.get(cle):
-                identite[f"{cle}_id"] = identite.pop(cle)
+                identite[cle] = _obj(chemin, identite[cle])
         restreints = {"contact_urgence_nom", "contact_urgence_tel", "piece_identite_type", "piece_identite_numero"}
         if restreints & set(identite):
             raise RegleMetier("Les champs restreints ne se saisissent pas hors ligne (OFF-06).")

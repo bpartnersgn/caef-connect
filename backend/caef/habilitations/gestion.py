@@ -13,10 +13,15 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import instantane, journaliser
 
 from .matrice import matrice
-from .models import (Affectation, HabilitationExceptionnelle, InterimResponsable, ModuleCentre,
-                     ModuleOptionnel, StatutModule)
+from .models import (
+    Affectation,
+    HabilitationExceptionnelle,
+    InterimResponsable,
+    ModuleCentre,
+    ModuleOptionnel,
+    StatutModule,
+)
 from .services import aujourd_hui, invalider_cache, module_actif, verifier
-
 
 # --------------------------------------------------------------------------- affectations
 
@@ -154,8 +159,16 @@ def habilitation_en_cours(utilisateur, objet_type, objet_id, jour=None):
 
 def operations_en_cours(centre_id, module) -> list[str]:
     """RG-ADM-19 : ce qui bloque une désactivation."""
-    from caef.boutique.models import (Emplacement, Inventaire, MouvementStock, Reversement, SessionCaisse,
-                                      StatutCaisse, StatutInventaire, StatutReversement)
+    from caef.boutique.models import (
+        Emplacement,
+        Inventaire,
+        MouvementStock,
+        Reversement,
+        SessionCaisse,
+        StatutCaisse,
+        StatutInventaire,
+        StatutReversement,
+    )
     from caef.paiements.models import Paiement, StatutPaiement
 
     blocages = []

@@ -116,10 +116,10 @@ class VueFichesIndicateurs(VueLectureMetier):
 
             raise RegleMetier("Statut de fiche inconnu.")
         verifier(request.user, "fiche_indicateur", "V" if statut in ("validee", "retiree") else "M")
+        from django.db import transaction
+
         from caef.journal.models import ActionJournal
         from caef.journal.services import journaliser
-
-        from django.db import transaction
 
         avant = f.statut
         f.statut = statut

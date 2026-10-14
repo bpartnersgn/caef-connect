@@ -22,10 +22,31 @@ from caef.journal.services import instantane, journaliser
 from caef.notifications.services import notifier_role
 from caef.pilotage.verrou import mois_de, mois_verrouille, verifier_mois_ouvert
 
-from .models import (TYPES_ENTREE, TYPES_SORTIE, Depot, Emplacement, Inventaire, LigneInventaire, LigneVente,
-                     ModeReglement, MouvementStock, OrigineProduit, PointDeVente, PrixProduit, Produit, Reglement,
-                     Reversement, SessionCaisse, StatutCaisse, StatutInventaire, StatutReglement, StatutReversement,
-                     StatutVente, Vente, stock)
+from .models import (
+    TYPES_ENTREE,
+    TYPES_SORTIE,
+    Depot,
+    Emplacement,
+    Inventaire,
+    LigneInventaire,
+    LigneVente,
+    ModeReglement,
+    MouvementStock,
+    OrigineProduit,
+    PointDeVente,
+    PrixProduit,
+    Produit,
+    Reglement,
+    Reversement,
+    SessionCaisse,
+    StatutCaisse,
+    StatutInventaire,
+    StatutReglement,
+    StatutReversement,
+    StatutVente,
+    Vente,
+    stock,
+)
 
 
 def _gnf(valeur, libelle="Le montant"):

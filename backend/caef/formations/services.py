@@ -16,9 +16,20 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import instantane, journaliser
 from caef.notifications.services import notifier_role
 
-from .models import (STATUTS_FINAUX, Attestation, EtatPresence, Evaluation, Formateur, Inscription, Presence,
-                     Seance, SessionFormation, StatutAttestation, StatutParticipation, StatutSession)
-
+from .models import (
+    STATUTS_FINAUX,
+    Attestation,
+    EtatPresence,
+    Evaluation,
+    Formateur,
+    Inscription,
+    Presence,
+    Seance,
+    SessionFormation,
+    StatutAttestation,
+    StatutParticipation,
+    StatutSession,
+)
 
 # --------------------------------------------------------------------------- périmètre « (s) »
 

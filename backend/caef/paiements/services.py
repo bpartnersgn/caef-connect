@@ -24,9 +24,20 @@ from caef.journal.services import instantane, journaliser
 from caef.notifications.services import notifier_role
 from caef.pilotage.verrou import verifier_mois_ouvert
 
-from .models import (STATUTS_ENCAISSES, AffectationPaiement, CanalPaiement, ExecutionRemboursement,
-                     LigneReleveOperateur, Paiement, Remboursement, StatutPaiement, StatutRapprochement,
-                     StatutRemboursement, TransactionPasserelle, TypeTransaction)
+from .models import (
+    STATUTS_ENCAISSES,
+    AffectationPaiement,
+    CanalPaiement,
+    ExecutionRemboursement,
+    LigneReleveOperateur,
+    Paiement,
+    Remboursement,
+    StatutPaiement,
+    StatutRapprochement,
+    StatutRemboursement,
+    TransactionPasserelle,
+    TypeTransaction,
+)
 from .passerelles import passerelle
 
 

@@ -7,7 +7,8 @@ from celery import shared_task
 def marquer_engagements_en_retard():
     from caef.partenaires.services import alerter_opportunites_sans_suite
 
-    from .services import marquer_engagements_en_retard as marquer, rappels_echeances
+    from .services import marquer_engagements_en_retard as marquer
+    from .services import rappels_echeances
 
     n = marquer()
     rappels_echeances()

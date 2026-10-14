@@ -16,8 +16,19 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import difference, instantane, journaliser
 from caef.notifications.services import notifier_role
 
-from .models import (Beneficiaire, Candidature, DecisionDoublon, Fusion, PaireDoublon, PrecisionNaissance,
-                     StatutBeneficiaire, StatutCandidature, StatutPaire, StatutTransfert, Transfert)
+from .models import (
+    Beneficiaire,
+    Candidature,
+    DecisionDoublon,
+    Fusion,
+    PaireDoublon,
+    PrecisionNaissance,
+    StatutBeneficiaire,
+    StatutCandidature,
+    StatutPaire,
+    StatutTransfert,
+    Transfert,
+)
 from .phonetique import cle_phonetique, nom_normalise
 
 CHAMPS_MODIFIABLES = {"nom", "prenoms", "autres_noms", "date_naissance", "annee_naissance", "tranche_age",

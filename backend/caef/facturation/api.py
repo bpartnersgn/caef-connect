@@ -3,11 +3,10 @@
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from caef.beneficiaires.models import Beneficiaire
 from caef.commun.api import VueLectureMetier, q_perimetre
 from caef.commun.vues import champ, date_, ref, serialiseur_pour
 from caef.habilitations.services import verifier
-
-from caef.beneficiaires.models import Beneficiaire
 
 from . import services
 from .models import Echeance, Exoneration, ServicePayant, TarifService

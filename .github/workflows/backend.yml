@@ -1,0 +1,45 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ["backend/**", "docs/04*", ".github/workflows/backend.yml"]
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: caef
+          POSTGRES_PASSWORD: caef-ci
+          POSTGRES_DB: caef
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      # Valeurs jetables propres à la CI, aucune donnée réelle (règles 7 et 10).
+      DJANGO_SECRET_KEY: ci-non-secret
+      CAEF_CLE_CHIFFREMENT_CHAMPS: Y2ktY2xlLWRlLXRlc3Qtbm9uLXNlY3JldGUtMzJvY3Q=
+      POSTGRES_HOST: localhost
+      POSTGRES_USER: caef
+      POSTGRES_PASSWORD: caef-ci
+      POSTGRES_DB: caef
+      CELERY_TASK_ALWAYS_EAGER: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: backend/requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: ruff check caef config conftest.py
+      - run: python manage.py check
+      - run: python manage.py makemigrations --check --dry-run
+      - run: pytest --create-db -p no:warnings

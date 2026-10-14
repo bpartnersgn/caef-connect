@@ -22,8 +22,18 @@ from caef.notifications.services import notifier, notifier_role
 from caef.partenaires.services import avancer_etape_derivee
 from caef.pilotage.verrou import verifier_mois_ouvert
 
-from .models import (Contribution, Convention, DecisionValidation, Engagement, EtatEngagement, Proposition,
-                     StatutContribution, StatutConvention, StatutProposition, Validation)
+from .models import (
+    Contribution,
+    Convention,
+    DecisionValidation,
+    Engagement,
+    EtatEngagement,
+    Proposition,
+    StatutContribution,
+    StatutConvention,
+    StatutProposition,
+    Validation,
+)
 
 METHODES_VALORISATION = ("facture", "devis", "prix_marche", "declaration_partenaire")
 

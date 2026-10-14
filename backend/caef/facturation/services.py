@@ -20,8 +20,15 @@ from caef.journal.models import ActionJournal
 from caef.journal.services import instantane, journaliser
 from caef.notifications.services import notifier_role
 
-from .models import (Echeance, Exoneration, ServicePayant, StatutEcheance, StatutExoneration, TarifService,
-                     TypeExoneration)
+from .models import (
+    Echeance,
+    Exoneration,
+    ServicePayant,
+    StatutEcheance,
+    StatutExoneration,
+    TarifService,
+    TypeExoneration,
+)
 
 
 def _gnf(v, libelle):

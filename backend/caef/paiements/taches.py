@@ -22,7 +22,8 @@ def consulter_paiement(paiement_id, minutes):
 def marquer_non_retrouves():
     """Paiements déclarés depuis 24 heures, et rattrapage des demandes restées en attente."""
     from .models import Paiement, StatutPaiement
-    from .services import consulter, marquer_non_retrouves as marquer
+    from .services import consulter
+    from .services import marquer_non_retrouves as marquer
 
     limite = timezone.now() - timedelta(minutes=61)
     for p in Paiement.objects.filter(statut__in=[StatutPaiement.INITIE, StatutPaiement.EN_ATTENTE], cree_le__lt=limite):

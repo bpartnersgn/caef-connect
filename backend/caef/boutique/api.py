@@ -12,8 +12,19 @@ from caef.commun.vues import Serialiseur, champ, date_, donnees, exporter, ref, 
 from caef.habilitations.services import verifier
 
 from . import services
-from .models import (Inventaire, LigneInventaire, LigneVente, MouvementStock, PointDeVente, PrixProduit, Produit,
-                     Reglement, Reversement, SessionCaisse, Vente)
+from .models import (
+    Inventaire,
+    LigneInventaire,
+    LigneVente,
+    MouvementStock,
+    PointDeVente,
+    PrixProduit,
+    Produit,
+    Reglement,
+    Reversement,
+    SessionCaisse,
+    Vente,
+)
 
 PDV = "boutique.PointDeVente"
 CENTRE_PDV = "point_de_vente__centre"
