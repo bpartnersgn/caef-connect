@@ -60,6 +60,8 @@ class VueMetier(viewsets.GenericViewSet):
         qs = self.queryset_base().filter(q)
         if self.champ_session is not None:
             qs = qs.distinct()
+        if not qs.ordered:
+            qs = qs.order_by("pk")  # UUIDv7 : ordre de création, pagination stable
         return qs
 
     def get_object(self):

@@ -18,5 +18,6 @@ app.conf.beat_schedule = {
     "paiements-non-retrouves": {"task": "caef.paiements.taches.marquer_non_retrouves", "schedule": crontab(minute=15)},
     "engagements-en-retard": {"task": "caef.conventions.taches.marquer_engagements_en_retard", "schedule": crontab(hour=0, minute=10)},
     "alertes-synchronisation": {"task": "caef.synchronisation.taches.alerter_appareils_en_retard", "schedule": crontab(minute=0)},
+    "sessions-demarrees": {"task": "caef.formations.taches.demarrer_sessions", "schedule": crontab(hour=0, minute=5)},
     "comptes-inactifs": {"task": "caef.identite.taches.suspendre_comptes_inactifs", "schedule": crontab(hour=3, minute=0)},
 }

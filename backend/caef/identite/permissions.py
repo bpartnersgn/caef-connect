@@ -23,6 +23,10 @@ class UtilisateurAuthentifie(BasePermission):
         user = request.user
         if not user or not user.is_authenticated:
             return False
+        if getattr(getattr(request, "auth", None), "est_jeton_appareil", False) \
+                and not getattr(view, "accepte_jeton_appareil", False):
+            # Le jeton d'appareil ne sert qu'à la synchronisation (DAT § 5.6).
+            raise AccesRefuse("Jeton d'appareil réservé à la synchronisation.", code="jeton_appareil_hors_synchro")
         if getattr(view, "sans_double_auth", False):
             return True
         if not double_auth_verifiee(request) and (user.double_auth_active or double_auth_obligatoire(user)):

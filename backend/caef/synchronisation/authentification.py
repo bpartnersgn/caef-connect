@@ -63,3 +63,17 @@ class AuthentificationAppareil(authentication.BaseAuthentication):
 
     def authenticate_header(self, request):
         return self.mot_cle
+
+
+try:
+    from drf_spectacular.extensions import OpenApiAuthenticationExtension
+
+    class SchemaAuthentificationAppareil(OpenApiAuthenticationExtension):
+        target_class = "caef.synchronisation.authentification.AuthentificationAppareil"
+        name = "jetonAppareil"
+
+        def get_security_definition(self, auto_schema):
+            return {"type": "apiKey", "in": "header", "name": "Authorization",
+                    "description": "« Appareil <jeton> », délivré après une connexion complète."}
+except ImportError:  # pragma: no cover
+    pass

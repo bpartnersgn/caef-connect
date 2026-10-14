@@ -186,3 +186,33 @@ class PaireDoublon(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["beneficiaire_a", "beneficiaire_b"], name="paire_doublon_unique"),
         ]
+
+
+class Fusion(ModeleMetier):
+    """Fusion de deux dossiers, réversible pendant 30 jours (RG-BEN-05, BEN-09).
+
+    Garde tout ce qu'il faut pour l'annuler : valeurs du dossier conservé avant fusion, valeurs
+    retenues champ par champ, candidatures et inscriptions rattachées au dossier conservé.
+    """
+
+    conserve = models.ForeignKey(Beneficiaire, on_delete=models.PROTECT, related_name="fusions_conservees")
+    absorbe = models.ForeignKey(Beneficiaire, on_delete=models.PROTECT, related_name="fusions_absorbees")
+    choix = models.JSONField(default=dict)  # {champ: "conserve" | "absorbe"}
+    valeurs_avant = models.JSONField(default=dict)  # valeurs du dossier conservé avant fusion
+    statut_absorbe_avant = models.CharField(max_length=10)
+    candidatures = models.JSONField(default=list)
+    inscriptions = models.JSONField(default=list)
+    paire = models.ForeignKey(PaireDoublon, null=True, blank=True, on_delete=models.PROTECT, related_name="+")
+    fusionne_par = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="+")
+    fusionne_le = models.DateTimeField()
+    annulee_par = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.PROTECT,
+                                    related_name="+")
+    annulee_le = models.DateTimeField(null=True, blank=True)
+    motif_annulation = models.TextField(blank=True, default="")
+
+    class Meta:
+        db_table = "fusion"
+        ordering = ["-fusionne_le"]
+        constraints = [
+            models.CheckConstraint(condition=~Q(conserve=models.F("absorbe")), name="fusion_dossiers_distincts"),
+        ]

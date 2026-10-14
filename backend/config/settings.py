@@ -214,6 +214,8 @@ CAEF_CLE_CHIFFREMENT_CHAMPS = env("CAEF_CLE_CHIFFREMENT_CHAMPS", obligatoire=Tru
 
 # Paramètres métier : positions d'attente du brief (section 5), tous réglables sans code.
 CAEF = {
+    # Jeu de démonstration fictif (manage.py generer_donnees_fictives) ; jamais en production.
+    "MOT_DE_PASSE_DEMO": env("CAEF_MOT_DE_PASSE_DEMO", ""),
     "SEUIL_DOUBLON_BLOQUANT": env_int("CAEF_SEUIL_DOUBLON_BLOQUANT", 60),
     "SEUIL_DOUBLON_INFORMATIF": env_int("CAEF_SEUIL_DOUBLON_INFORMATIF", 40),
     "JOURS_BENEFICIAIRE_ACTIVE": env_int("CAEF_JOURS_BENEFICIAIRE_ACTIVE", 90),
@@ -235,10 +237,18 @@ CAEF = {
     "DOCUMENT_LIEN_SECONDES": env_int("CAEF_DOCUMENT_LIEN_SECONDES", 300),
     "CLOTURE_MENSUELLE_JOUR_LIMITE": env_int("CAEF_CLOTURE_MENSUELLE_JOUR_LIMITE", 10),
     "FUSION_REVERSIBLE_JOURS": env_int("CAEF_FUSION_REVERSIBLE_JOURS", 30),
+    "JOURS_INACTIVITE_DOSSIER": env_int("CAEF_JOURS_INACTIVITE_DOSSIER", 365),
+    # Champs requis pour un dossier complet : liste minimale à valider par la Direction (PRD H4).
+    "CHAMPS_REQUIS_DOSSIER": ("nom", "prenoms", "sexe", "zone_residence", "consentement_date",
+                              "consentement_mode", "naissance"),
     "HABILITATION_EXCEPTIONNELLE_JOURS_MAX": 30,
+    # Seuil de seconde validation d'une proposition (RG-CNV-02, H5) : non fixé tant que la Direction ne l'a pas décidé.
+    "SEUIL_SECONDE_VALIDATION_PROPOSITION": env("CAEF_SEUIL_SECONDE_VALIDATION_PROPOSITION", None),
     "FIABILITE_FAIBLE_PCT_MANQUANTS": 20,
     "PASSERELLE_MOBILE_MONEY": env("CAEF_PASSERELLE_MOBILE_MONEY", "declaratif"),
     "NUMERO_MARCHAND": env("CAEF_NUMERO_MARCHAND", ""),
+    # Centre dont le comptable reçoit les paiements sans référence d'échéance valide (compte marchand commun, H16).
+    "CENTRE_PAIEMENTS_NON_REFERENCES": env("CAEF_CENTRE_PAIEMENTS_NON_REFERENCES", ""),
 }
 
 # Secrets de la passerelle (coffre de secrets en production) ; aucun appel réel hors production.
