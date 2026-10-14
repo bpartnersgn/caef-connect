@@ -1,10 +1,10 @@
 # Modèle et dictionnaire des données CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026 (écarts du modèle implémenté, section 10)
 
 ## 1. Objet et conventions
 
-Ce document fixe les 64 entités du MVP (dont les 12 du module boutique, dans le lot 1 (H14 tranchée), les 2 de la clôture mensuelle, SRC-02, et les 13 ajoutées le 13/10/2026 : 4 pour la synchronisation hors ligne, OFF-01 à OFF-08, et 9 pour la scolarité et les paiements, PAY-01 à PAY-11, puis l'entité module\_centre pour les modules activés par centre, ADM-08), leurs relations et la définition de chaque champ ; il sert de base à la base de données relationnelle prévue par le DAT et aux contrôles de saisie décrits dans la SFD.
+Ce document fixe les 64 entités du MVP (dont les 12 du module boutique, dans le lot 1 (H14 tranchée), les 2 de la clôture mensuelle, SRC-02, et les 13 ajoutées le 13/10/2026 : 4 pour la synchronisation hors ligne, OFF-01 à OFF-08, et 9 pour la scolarité et les paiements, PAY-01 à PAY-11, puis l'entité module\_centre pour les modules activés par centre, ADM-08), leurs relations et la définition de chaque champ ; il sert de base à la base de données relationnelle prévue par le DAT et aux contrôles de saisie décrits dans la SFD. Le backend du lot 1 y ajoute six tables techniques (compteur des codes, paires de doublons, fusions, fiches et valeurs d'indicateurs, rapports) et quelques champs de traçabilité, listés en section 10.
 
 **Nommage.** Tables et champs en français, minuscules, sans accent, séparés par des tirets bas (`session_formation`, `date_debut`). Clé primaire `id`, clé étrangère `<entite>_id`.
 
@@ -888,3 +888,139 @@ Neuf entités enregistrent les services payants, ce que chaque bénéficiaire do
 | transaction\_passerelle\_id | FK transaction\_passerelle | S | I | Appariement ; vide si la transaction manque côté outil |
 | statut\_rapprochement | Énum (apparie, absent\_outil, absent\_releve, ecart\_montant) | S | I |  |
 | motif | Texte | C | I | Obligatoire pour un écart, saisi par le CPT (PAY-10) |
+
+
+## 10. Écarts du modèle implémenté (backend du lot 1, 14/10/2026)
+
+Le backend du lot 1 (dépôt `bpartnersgn/caef-connect`, dossier `backend/`) suit ce modèle : noms de tables et de champs, colonnes communes, montants en décimal (18,2) avec devise, GNF entiers contrôlés pour la boutique et les paiements, suppression physique interdite. Cette section liste ce qu'il ajoute ou précise. Les ajouts sont des tables techniques ou des champs de traçabilité ; aucun ne change une règle de gestion.
+
+**Mises en œuvre transverses.**
+
+- `appareil_id`, colonne commune, est un UUID sans clé étrangère vers `appareil`, pour éviter une dépendance circulaire entre modules.
+- Les identifiants sont des UUID v7 générés par le serveur, ou par l'appareil pour une création hors ligne.
+- Les champs restreints (R) les plus sensibles sont chiffrés au niveau applicatif (Fernet, clé `CAEF_CLE_CHIFFREMENT_CHAMPS` hors du dépôt) : `beneficiaire.contact_urgence_nom`, `contact_urgence_tel`, `piece_identite_numero`, et `utilisateur.secret_double_auth`.
+- Les contraintes d'unicité et de cohérence simples sont en base. Les contraintes d'exclusion de périodes (par exemple un seul tarif en vigueur par date) et la sécurité au niveau des lignes (RLS) de PostgreSQL ne le sont pas encore : elles sont contrôlées dans les services.
+
+**Tables ajoutées.**
+
+### compteur\_code
+
+Compteur technique des codes lisibles (BEN-CMR-2026-00042, ATT-…, références de paiement). Une ligne par préfixe, incrémentée sous verrou de ligne.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| cle | Texte(60) | O | I | Clé primaire ; préfixe du code, ex. « BEN-CMR-2026 » |
+| valeur | Entier | S | I | Dernier numéro attribué |
+
+### paire\_doublon
+
+Paires de dossiers suspectes, recalculées chaque nuit pour l'écran des doublons (E-BEN-05, RG-BEN-04). Table technique, sans colonnes communes.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| beneficiaire\_a\_id, beneficiaire\_b\_id | FK beneficiaire | O | I | Unique (beneficiaire\_a\_id, beneficiaire\_b\_id) |
+| score | Entier | S | I | Score de rapprochement ; 60 ou plus bloque la création, 40 ou plus est signalé (paramètres) |
+| champs\_concordants | JSON | S | I | Critères qui ont donné des points ; le téléphone seul n'en donne aucun |
+| statut | Énum (a\_traiter, distinctes, fusionnees) | S | I |  |
+| detectee\_le | DateHeure | S | I |  |
+| traitee\_par, traitee\_le, commentaire | FK utilisateur, DateHeure, Texte | C | I | Renseignés au traitement |
+
+### fusion
+
+Fusion de deux dossiers, réversible pendant 30 jours (RG-BEN-05, BEN-09, paramètre `CAEF_FUSION_REVERSIBLE_JOURS`). Elle garde tout ce qu'il faut pour l'annuler.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| conserve\_id, absorbe\_id | FK beneficiaire | O | I | Toujours distincts (contrainte en base) |
+| choix | JSON | O | N | Valeur retenue champ par champ : « conserve » ou « absorbe » |
+| valeurs\_avant | JSON | S | N | Valeurs du dossier conservé avant la fusion |
+| statut\_absorbe\_avant | Texte(10) | S | I | Statut du dossier absorbé avant la fusion |
+| candidatures, inscriptions | JSON | S | I | Identifiants rattachés au dossier conservé, rendus à l'annulation |
+| paire\_id | FK paire\_doublon | F | I | Paire à l'origine de la fusion |
+| fusionne\_par, fusionne\_le | FK utilisateur, DateHeure | S | I |  |
+| annulee\_par, annulee\_le, motif\_annulation | FK utilisateur, DateHeure, Texte | C | I | Obligatoires si annulée |
+
+### fiche\_indicateur
+
+Statut de la fiche de chaque indicateur du Référentiel (H10, TDB-01) : seul un indicateur à fiche validée s'affiche au national. Les fiches sont créées automatiquement depuis la liste des indicateurs calculés.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| code | Texte(10) | O | P | Clé primaire, ex. IND-07 |
+| libelle | Texte(200) | O | P |  |
+| version | Entier | S | I | Version de la fiche, reportée sur chaque valeur calculée |
+| statut | Énum (brouillon, proposee, validee, revisee, retiree) | S | I | Une fiche retirée n'est plus calculée |
+| niveau\_validation | Texte(20) | S | I | verifie ou declaratif |
+| module | Texte(30) | S | I | socle, ou module optionnel dont dépend l'indicateur (boutique…) |
+
+### valeur\_indicateur (schéma pilotage)
+
+Table de synthèse du schéma `pilotage`, recalculée chaque nuit pour le mois courant et le mois précédent, figée à la clôture d'une période (RG-TDB-01, RG-TDB-04). Une ligne par indicateur, centre (vide pour le national), période et ventilation.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| indicateur, version\_fiche | Texte(10), Entier | O | P |  |
+| centre\_id | FK centre | F | P | Vide : valeur nationale, centres fictifs exclus |
+| periode\_debut, periode\_fin | Date | O | P |  |
+| ventilation | Texte(60) | F | P | Ex. devise:USD, nature:financiere ; chaque devise et chaque nature restent séparées |
+| valeur, valeur\_declarative | Décimal | F | P | Vide : « non renseigné », jamais 0 |
+| numerateur, denominateur | Décimal | F | P | Pour les taux |
+| nb\_non\_renseignes | Entier | S | P | Cas comptés à part |
+| module\_non\_active | Booléen | S | P | Vrai : « Module non activé », jamais 0 (RG-ADM-20) |
+| niveau | Texte(12) | S | P | verifie ou declaratif |
+| fiabilite\_faible | Booléen | S | P | Vrai au-delà de 20 % de valeurs manquantes |
+| details | JSON | S | P | Ex. nombre de centres couverts |
+| calcule\_le | DateHeure | S | P |  |
+| fige | Booléen | S | P | Vrai : la valeur n'est plus recalculée |
+
+### rapport
+
+Rapports R-01 à R-04 de la SFD (§ 8.2), avec leur circuit de validation et de transmission.
+
+| Champ | Type | Obl. | Sens | Description et contrôle |
+| --- | --- | --- | --- | --- |
+| type | Énum (R-01 session, R-02 centre, R-03 national, R-04 partenaire) | O | I |  |
+| centre\_id, convention\_id | FK centre, FK convention | C | I | Selon le type ; la convention pour un rapport partenaire |
+| periode\_debut, periode\_fin, date\_limite | Date | O, O, F | I |  |
+| contenu | JSON | S | I | Chiffres figés du rapport ; aucun nom de bénéficiaire dans un rapport partenaire (REP-06) |
+| commentaire | Texte | F | I |  |
+| statut | Énum (brouillon, valide, transmis) | S | I |  |
+| valide\_par, valide\_le, transmis\_le | FK utilisateur, DateHeure, DateHeure | C | I |  |
+
+**Champs ajoutés aux tables existantes.** Ces champs portent une trace ou un état que les sections précédentes décrivaient en règle, sans champ dédié.
+
+| Table | Champs ajoutés | Raison |
+| --- | --- | --- |
+| utilisateur | codes\_secours (empreintes), echecs\_horodatages, mot\_de\_passe\_temporaire | Codes de secours de la double authentification, blocage après échecs, changement imposé du mot de passe provisoire |
+| role | code, libelle, titre\_organigramme, double\_auth (obligatoire, recommandee, non), hors\_ligne, actif | Rôles et titres de l'organigramme ; les droits sont dans `permission` (role, objet, action, périmètre, module, condition) et dans `matrice.yaml` |
+| interim\_responsable | interrompu\_le, motif\_interruption | Fin anticipée d'un intérim |
+| journal\_audit | interim | Vrai si l'action est faite au titre d'un intérim |
+| document | centre, version\_document, remplace | Versions successives d'une pièce |
+| validation | centre | Périmètre du circuit |
+| beneficiaire | tranche\_age, qualite (fiable, a\_verifier) | Âge connu par tranche ; donnée reprise à vérifier (MIG-01, SRC-03) |
+| candidature | date\_soumission, doublon\_probable, doublon\_score | Délai de traitement (IND-10) ; résultat du contrôle de doublon |
+| session\_formation | date\_ouverture, date\_cloture, commentaire\_cloture, motif\_annulation |  |
+| seance | presences\_validees\_le | Présences saisies dans les délais (IND-33) |
+| inscription | date\_statut\_final | Fenêtre « bénéficiaire active » (IND-03) |
+| attestation, engagement, contribution | motif\_annulation, motif\_abandon ; valide\_le, rapproche\_le |  |
+| partenaire | raison\_sociale\_normalisee | Recherche des partenaires proches avant création |
+| opportunite, fiche\_projet, proposition, convention, contribution | devise | Montants par devise (RG-CTR-06) |
+| opportunite | responsable, motif\_cloture |  |
+| proposition | numero\_version, version\_suivante | Versions successives ; unique (code, numero\_version) |
+| produit | code |  |
+| vente | mois\_corrige | Écriture de régularisation référencée au mois corrigé (RG-SRC-03) |
+| mouvement\_stock, vente, ligne\_inventaire | emplacement (boutique, salle\_exposition) | Salle d'exposition comme second emplacement de stock (BOU-15) |
+| session\_caisse, inventaire | compte\_le, motif\_recomptage, ouvert\_par |  |
+| reversement | point\_de\_vente, valide\_le, paye\_par | Le reversement est rattaché au point de vente ; son lien à la clôture mensuelle passe par `ligne_rapprochement` |
+| echeance | centre, rang | Ordre des versements |
+| paiement | fournisseur, reference\_echeance, affectation\_prevue, usage\_boutique, motif\_operateur |  |
+| affectation\_paiement | automatique | Affectation faite par la référence, sans motif |
+| remboursement | echeance, valide\_le, execute\_le |  |
+| ligne\_releve\_operateur | paiement, importe\_le, motive\_par | Relevés importés par fichier CSV ou JSON en attendant le contrat de la passerelle (H16) |
+| cloture\_mensuelle | derogation\_appareils, motif\_renvoi | Clôture permise malgré un appareil non synchronisé, sur décision du RC |
+| ligne\_rapprochement | module\_non\_active |  |
+| appareil | plus\_ancienne\_operation\_en\_attente | Alerte au RC après 48 heures (OFF-07) |
+| operation\_synchronisation | reponse, regularisee | Codes définitifs renvoyés à l'appareil ; écriture tardive régularisée |
+| conflit\_synchronisation | centre | Périmètre de la file « À résoudre » |
+
+**Relations à plusieurs.** Les champs qui listent plusieurs objets (formateur.centres, programme.centres, convention.centres, opportunite.centres et fiches\_projet, proposition.centres\_beneficiaires, interaction.interlocuteurs et participants\_internes, contribution.justificatifs, session\_formation.formateurs\_associes) sont des tables de liaison (par exemple `programme_centre`, `formateur_centre`).

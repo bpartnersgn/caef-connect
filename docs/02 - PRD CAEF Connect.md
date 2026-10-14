@@ -1,6 +1,6 @@
 # PRD CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026 (avancement de la réalisation, section 9)
 
 ## 1. Objet du document
 
@@ -519,11 +519,13 @@ Dans la phase 3, l'ordre de construction suit le plan : administration et utilis
 | --- | --- | --- |
 | 1. Cadrage et diagnostic | Validation du cadrage par la Direction | Situation de référence des indicateurs ; registres papier à reprendre inventoriés (SRC-03) ; équipement et couverture réseau du centre pilote évalués ; opérateurs Mobile Money utilisés par les payeuses relevés |
 | 2. Conception | Autorisation de lancer la réalisation | PRD validé, décisions du 12/10/2026 et demandes du 13/10/2026 formalisées par la Direction Générale, autres hypothèses et écarts arbitrés ; SFD, modèle de données, DAT détaillé |
-| 3. Réalisation du lot 1 | Version candidate à la validation métier | Exigences P0 du lot 1 livrées avec leurs critères d'acceptation |
+| 3. Réalisation du lot 1 | Version candidate à la validation métier | Exigences P0 du lot 1 livrées avec leurs critères d'acceptation ; commencée avant la fin de la phase 2 (voir ci-dessous) |
 | 4. Tests et formation | Décision de mise en production pilote | Conditions minimales de mise en service remplies (section 7) ; reprise des registres papier validée (MIG-01, SRC-03) ; centre pilote équipé |
 | 5. Pilote et stabilisation | Validation du pilote par le comité | Critères de succès de la section 9.1 ; décision de poursuivre, corriger ou suspendre |
 | 6. Consolidation et extension contrôlée | Autorisation de chaque vague | Lot 2 livré ; conditions d'intégration de chaque centre remplies (section 9.2) |
 | 7. Extension et pérennisation | Revue stratégique de fin de cycle | Lot 3 selon décision ; bilan des indicateurs et des coûts d'exploitation |
+
+**Avancement au 14/10/2026.** La réalisation du lot 1 a commencé sur les positions d'attente, avant la formalisation des décisions par la Direction Générale. Le backend est écrit : services métier de tous les modules du lot 1 (ADM, USR, BEN, FOR, DOC, TDB, REP, PAR, CNV, CTR, BOU, SRC, OFF côté serveur, PAY avec passerelle déclarative ou simulée), API REST, moteur de droits tiré de la Matrice, données fictives, tests automatisés et intégration continue. Restent les écrans du back-office, l'application terrain hors ligne, l'adaptateur de la passerelle (après H16), la reprise des registres et le durcissement. Chaque hypothèse H1 à H16 encore ouverte y est un paramètre réglable sans code (Brief développeur, § 5) ; une décision de la Direction Générale différente de la position d'attente se traduira donc par un réglage, pas par une refonte. Indicateurs non calculés au lot 1 : IND-11, IND-12, IND-25, IND-29, IND-32, IND-35 et IND-41 à IND-44 (Référentiel, § 2.3).
 
 ### 9.1 Critères de succès du MVP à l'issue du pilote
 

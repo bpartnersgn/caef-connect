@@ -1,6 +1,6 @@
 # Matrice des rôles et permissions CAEF Connect
 
-Oct 12, 2026 · @Bangoura
+Oct 12, 2026 · @Bangoura · mis à jour le 14/10/2026 (transcription dans le backend, section 5)
 
 ## 1. Principes et légende
 
@@ -206,3 +206,31 @@ Les droits sont attribués sur demande écrite, revus chaque trimestre et testé
 **Tests.** Pour chaque cellule de la section 3, la campagne de sécurité vérifie le droit accordé (l'action réussit) et le droit refusé (l'action échoue par l'interface et par appel direct à l'API, y compris celle de synchronisation), sur deux centres de test : CAEF Cameroun (Dixinn) et Centre de test B, avec des données fictives. Une seule cellule non conforme bloque la mise en service (DAT § 12).
 
 **Validation.** Cette matrice est validée par la Direction Générale et le référent données et protection ; toute modification suit la procédure de gestion des changements (Plan § 11).
+
+### 5.1 Transcription dans le backend (14/10/2026)
+
+Le backend du lot 1 lit les droits dans un seul fichier de données, `backend/caef/habilitations/matrice.yaml`, transcrit de la section 3 cellule par cellule (rôle, objet, action, périmètre, condition) ; aucun droit n'est écrit en dur dans le code, et une action absente du fichier est refusée. Le test automatisé `caef/habilitations/tests/test_matrice.py` vérifie que le fichier reproduit ce document, puis que chaque cellule est appliquée par le moteur de droits dans le centre de l'utilisateur et refusée dans un autre centre ; il vérifie aussi l'intérim du RA (règle 6), la validation de caisse à défaut de CPT et la suspension d'un rôle propre à un module désactivé (règle 9). Toute modification de ce document doit donc être reportée dans `matrice.yaml`, sans quoi l'intégration continue échoue.
+
+Là où la SFD et la Matrice divergent, ou se taisent, le backend a retenu la lecture la plus restrictive. Ces lectures sont listées dans `backend/DECISIONS.md` et dans le test, et sont à confirmer à la validation de cette matrice :
+
+| Point | Lecture retenue |
+| --- | --- |
+| Annulation d'une vente | Réservée au CPT (`vente_annulation`, A pour le CPT seul) |
+| Annulation d'une candidature | Exige le droit A : RC, ou RA en intérim |
+| Mise en liste d'attente | Relève du droit C sur l'inscription |
+| « À défaut de CPT » (V~) | Aucun comptable actif affecté au centre ce jour-là |
+| Comptage de l'inventaire par l'AA | Seulement si l'AA cumule le rôle VB |
+| Ouverture d'un inventaire | RC ou RA seulement |
+| Fiche projet | Rattachée au module optionnel `rse_centre` |
+| Déclaration d'intérim | Objet `interim` tiré de RG-ADM-13, sans ligne propre dans les tableaux de la section 3 |
+| Cheffe de classe | Désignée au titre du droit M sur la présence (FO ou RP) |
+| File « À résoudre » | Scindée en deux objets : `conflit_synchronisation` (RC, RA) et `ecriture_tardive` (CPT) |
+| Transfert | Le côté accueil (C) ou origine (V) est contrôlé par le service, la matrice ne portant qu'un droit par objet |
+| Volet boutique du tableau de bord national pour la DG | Prévu au lot 2, non ouvert |
+| Import des bénéficiaires par l'ADM | Exécution technique nationale, l'ADM étant affecté au national |
+| Identité minimale des déposantes | Objet `deposante_identite`, tiré de la colonne « accès nominatif » du tableau des rôles |
+| Rôle CMT | Absent des tableaux de la section 3 ; ses droits viennent du texte (consultation des appareils, sans donnée nominative, en ligne seulement) |
+
+Deux points restent hors du lot 1 : après un transfert, le centre d'origine n'a pas de lecture de l'historique du dossier ; et le cloisonnement par centre est contrôlé dans les services et la couche d'accès aux données, pas encore par des règles de sécurité au niveau des lignes (RLS) de PostgreSQL.
+
+**Comptes de test.** La commande `generer_donnees_fictives` crée les deux centres de test (CAEF Cameroun, code CMR, et Centre de test B, code TSB, marqué fictif) et un compte par rôle : `adm.national`, `dg.direction`, `rse.national`, `se.national`, puis `rc.cmr`, `ra.cmr`, `aa.cmr`, `rp.cmr`, `fo.cmr`, `cpt.cmr`, `vb.cmr`, `cmt.cmr`, et `rc.tsb`, `aa.tsb` pour le second centre. Elle est refusée en production.
