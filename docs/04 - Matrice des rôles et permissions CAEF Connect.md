@@ -227,6 +227,8 @@ Là où la SFD et la Matrice divergent, ou se taisent, le backend a retenu la le
 | File « À résoudre » | Scindée en deux objets : `conflit_synchronisation` (RC, RA) et `ecriture_tardive` (CPT) |
 | Transfert | Le côté accueil (C) ou origine (V) est contrôlé par le service, la matrice ne portant qu'un droit par objet |
 | Volet boutique du tableau de bord national pour la DG | Prévu au lot 2, non ouvert |
+| Import des bénéficiaires par l'ADM | Exécution technique nationale, l'ADM étant affecté au national |
+| Identité minimale des déposantes | Objet `deposante_identite`, tiré de la colonne « accès nominatif » du tableau des rôles |
 | Rôle CMT | Absent des tableaux de la section 3 ; ses droits viennent du texte (consultation des appareils, sans donnée nominative, en ligne seulement) |
 
 Deux points restent hors du lot 1 : après un transfert, le centre d'origine n'a pas de lecture de l'historique du dossier ; et le cloisonnement par centre est contrôlé dans les services et la couche d'accès aux données, pas encore par des règles de sécurité au niveau des lignes (RLS) de PostgreSQL.
